@@ -71,8 +71,9 @@ void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
 void swap16(uint16_t *a, uint16_t *b);
 
 // DATA
-Point pos;
+volatile Point pos;
 volatile Point A, B;
+volatile Point LastB;
 int8_t stepCount1, stepCount2;
 
 volatile uint8_t rxBuffer[RX_BUFFERSIZE]; //this holds all the serial data

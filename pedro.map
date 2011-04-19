@@ -20,6 +20,7 @@ Common symbol       size              file
 
 instructions        0x9               pedro.o
 rxbc                0x1               pedro.o
+LastB               0x4               pedro.o
 A                   0x4               pedro.o
 pos                 0x4               pedro.o
 stepCount1          0x1               pedro.o
@@ -138,7 +139,7 @@ LOAD /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a
 .rela.plt
  *(.rela.plt)
 
-.text           0x00000000      0x6f2
+.text           0x00000000      0x772
  *(.vectors)
  .vectors       0x00000000       0x26 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/../../../../avr/lib/avr4/crtm8.o
                 0x00000000                __vectors
@@ -214,47 +215,47 @@ LOAD /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a
                 0x0000006c                __vector_10
                 0x0000006c                __vector_16
                 0x0000006c                __vector_18
- .text          0x0000006e      0x5c4 pedro.o
-                0x000005a6                initUSART
-                0x00000624                initTimers
-                0x0000058e                swap16
+ .text          0x0000006e      0x644 pedro.o
+                0x00000606                initUSART
+                0x000006a4                initTimers
+                0x000005ee                swap16
                 0x0000015e                line
-                0x00000510                __vector_11
-                0x000005ba                initMotors
+                0x0000056c                __vector_11
+                0x0000061a                initMotors
                 0x00000076                wakeMotors
-                0x000005de                main
-                0x0000057a                delay_ms
+                0x0000063e                main
+                0x000005da                delay_ms
                 0x00000070                sleepMotors
                 0x000000de                moveHalfStep
                 0x0000006e                setMotors
-                0x000003b4                processUSART
+                0x000003b0                processUSART
                 0x0000007c                changeStep
- .text          0x00000632        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_divmodhi4.o)
- .text          0x00000632        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_prologue.o)
- .text          0x00000632        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_epilogue.o)
- .text          0x00000632        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_exit.o)
- .text          0x00000632        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_copy_data.o)
- .text          0x00000632        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_clear_bss.o)
- .text          0x00000632        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_udivmodhi4.o)
-                0x00000632                . = ALIGN (0x2)
+ .text          0x000006b2        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_divmodhi4.o)
+ .text          0x000006b2        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_prologue.o)
+ .text          0x000006b2        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_epilogue.o)
+ .text          0x000006b2        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_exit.o)
+ .text          0x000006b2        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_copy_data.o)
+ .text          0x000006b2        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_clear_bss.o)
+ .text          0x000006b2        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_udivmodhi4.o)
+                0x000006b2                . = ALIGN (0x2)
  *(.text.*)
- .text.libgcc   0x00000632       0x26 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_divmodhi4.o)
-                0x00000632                __divmodhi4
-                0x00000632                _div
- .text.libgcc   0x00000658       0x38 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_prologue.o)
-                0x00000658                __prologue_saves__
- .text.libgcc   0x00000690       0x36 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_epilogue.o)
-                0x00000690                __epilogue_restores__
- .text.libgcc   0x000006c6        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_exit.o)
- .text.libgcc   0x000006c6        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_copy_data.o)
- .text.libgcc   0x000006c6        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_clear_bss.o)
- .text.libgcc   0x000006c6       0x28 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_udivmodhi4.o)
-                0x000006c6                __udivmodhi4
-                0x000006ee                . = ALIGN (0x2)
+ .text.libgcc   0x000006b2       0x26 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_divmodhi4.o)
+                0x000006b2                __divmodhi4
+                0x000006b2                _div
+ .text.libgcc   0x000006d8       0x38 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_prologue.o)
+                0x000006d8                __prologue_saves__
+ .text.libgcc   0x00000710       0x36 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_epilogue.o)
+                0x00000710                __epilogue_restores__
+ .text.libgcc   0x00000746        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_exit.o)
+ .text.libgcc   0x00000746        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_copy_data.o)
+ .text.libgcc   0x00000746        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_clear_bss.o)
+ .text.libgcc   0x00000746       0x28 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_udivmodhi4.o)
+                0x00000746                __udivmodhi4
+                0x0000076e                . = ALIGN (0x2)
  *(.fini9)
- .fini9         0x000006ee        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_exit.o)
-                0x000006ee                exit
-                0x000006ee                _exit
+ .fini9         0x0000076e        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_exit.o)
+                0x0000076e                exit
+                0x0000076e                _exit
  *(.fini9)
  *(.fini8)
  *(.fini8)
@@ -273,11 +274,11 @@ LOAD /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a
  *(.fini1)
  *(.fini1)
  *(.fini0)
- .fini0         0x000006ee        0x4 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_exit.o)
+ .fini0         0x0000076e        0x4 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_exit.o)
  *(.fini0)
-                0x000006f2                _etext = .
+                0x00000772                _etext = .
 
-.data           0x00800060        0x0 load address 0x000006f2
+.data           0x00800060        0x0 load address 0x00000772
                 0x00800060                PROVIDE (__data_start, .)
  *(.data)
  .data          0x00800060        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/../../../../avr/lib/avr4/crtm8.o
@@ -297,7 +298,7 @@ LOAD /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a
                 0x00800060                _edata = .
                 0x00800060                PROVIDE (__data_end, .)
 
-.bss            0x00800060       0x23
+.bss            0x00800060       0x27
                 0x00800060                PROVIDE (__bss_start, .)
  *(.bss)
  .bss           0x00800060        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/../../../../avr/lib/avr4/crtm8.o
@@ -311,27 +312,28 @@ LOAD /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a
  .bss           0x00800060        0x0 /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a(_udivmodhi4.o)
  *(.bss*)
  *(COMMON)
- COMMON         0x00800060       0x23 pedro.o
+ COMMON         0x00800060       0x27 pedro.o
                 0x00800060                instructions
                 0x00800069                rxbc
-                0x0080006a                A
-                0x0080006e                pos
-                0x00800072                stepCount1
-                0x00800073                B
-                0x00800077                rxBuffer
-                0x00800080                delayTime
-                0x00800081                stepCount2
-                0x00800082                nextLineFlag
-                0x00800083                PROVIDE (__bss_end, .)
-                0x000006f2                __data_load_start = LOADADDR (.data)
-                0x000006f2                __data_load_end = (__data_load_start + SIZEOF (.data))
+                0x0080006a                LastB
+                0x0080006e                A
+                0x00800072                pos
+                0x00800076                stepCount1
+                0x00800077                B
+                0x0080007b                rxBuffer
+                0x00800084                delayTime
+                0x00800085                stepCount2
+                0x00800086                nextLineFlag
+                0x00800087                PROVIDE (__bss_end, .)
+                0x00000772                __data_load_start = LOADADDR (.data)
+                0x00000772                __data_load_end = (__data_load_start + SIZEOF (.data))
 
-.noinit         0x00800083        0x0
-                0x00800083                PROVIDE (__noinit_start, .)
+.noinit         0x00800087        0x0
+                0x00800087                PROVIDE (__noinit_start, .)
  *(.noinit*)
-                0x00800083                PROVIDE (__noinit_end, .)
-                0x00800083                _end = .
-                0x00800083                PROVIDE (__heap_start, .)
+                0x00800087                PROVIDE (__noinit_end, .)
+                0x00800087                _end = .
+                0x00800087                PROVIDE (__heap_start, .)
 
 .eeprom         0x00810000        0x0
  *(.eeprom*)
@@ -390,36 +392,36 @@ LOAD /usr/local/CrossPack-AVR-20100115/lib/gcc/avr/4.3.3/avr4/libgcc.a
                 0x00000000       0x20 pedro.o
 
 .debug_pubnames
-                0x00000000      0x14e
+                0x00000000      0x158
  *(.debug_pubnames)
  .debug_pubnames
-                0x00000000      0x14e pedro.o
+                0x00000000      0x158 pedro.o
 
-.debug_info     0x00000000      0x5be
+.debug_info     0x00000000      0x5ca
  *(.debug_info)
- .debug_info    0x00000000      0x5be pedro.o
+ .debug_info    0x00000000      0x5ca pedro.o
  *(.gnu.linkonce.wi.*)
 
-.debug_abbrev   0x00000000      0x26d
+.debug_abbrev   0x00000000      0x27e
  *(.debug_abbrev)
- .debug_abbrev  0x00000000      0x26d pedro.o
+ .debug_abbrev  0x00000000      0x27e pedro.o
 
-.debug_line     0x00000000      0x6b4
+.debug_line     0x00000000      0x6f0
  *(.debug_line)
- .debug_line    0x00000000      0x6b4 pedro.o
+ .debug_line    0x00000000      0x6f0 pedro.o
 
 .debug_frame    0x00000000       0xf0
  *(.debug_frame)
  .debug_frame   0x00000000       0xf0 pedro.o
 
-.debug_str      0x00000000      0x1ca
+.debug_str      0x00000000      0x1d0
  *(.debug_str)
- .debug_str     0x00000000      0x1ca pedro.o
-                                0x21b (size before relaxing)
+ .debug_str     0x00000000      0x1d0 pedro.o
+                                0x221 (size before relaxing)
 
-.debug_loc      0x00000000      0x23c
+.debug_loc      0x00000000      0x264
  *(.debug_loc)
- .debug_loc     0x00000000      0x23c pedro.o
+ .debug_loc     0x00000000      0x264 pedro.o
 
 .debug_macinfo
  *(.debug_macinfo)

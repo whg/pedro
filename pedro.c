@@ -27,6 +27,10 @@ int main (void) {
 		
 		
 		if (nextLineFlag) {
+			
+			LastB.x = B.x;
+			LastB.y = B.y;
+			
 			line(A.x, A.y, B.x, B.y);
 		}
 		
@@ -39,9 +43,13 @@ int main (void) {
 // INTERRUPT FUNCTIONS
 
 ISR(USART_RXC_vect) {
-		
+	
+	//check to see if we are ready to read a byte
+	while ((UCSRA & (1 << RXC)) == 0) {}; 
+	
 	rxBuffer[rxbc] = UDR;
 	rxbc++;
+	
 	if (rxbc == RX_BUFFERSIZE) {
 		processUSART();
 		//setMotors();
@@ -101,6 +109,7 @@ void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1){
 			//send for new coordinates
 			//do this once, halfway through the line
 			if (abs(x0) > (dx/2) && !send) {
+				while ((UCSRA & (1 << UDRE)) == 0) {};
 				UDR = 56;
 				send = 1;
 			}
@@ -140,6 +149,7 @@ void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1){
 			//send for new coordinates
 			//do this once, halfway through the line
 			if (abs(y0) > (dy/2) && !send) {
+				while ((UCSRA & (1 << UDRE)) == 0) {};
 				UDR = 56;
 				send = 1;
 			}
@@ -151,74 +161,14 @@ void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1){
 		}// end while
 	}
 	
+	//check to see if we have reached destination...
 	if (x1 == B.x && y1 == B.y) {
-		//this means we have reached our destination.
 		nextLineFlag = 0;
 	}
 	
 	sleepMotors();
 	
 }
-
-//void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
-//	
-//	
-//	wakeMotors();
-//
-//	uint8_t send = 0;
-//	
-//	uint16_t x;
-//	for (x = x0; x < x1; x++) {
-//		
-//		//move x
-//		if (steep) {
-//			moveHalfStep(1, stepCount1);
-//			stepCount1+= xstep;
-//		} else {
-//			moveHalfStep(2, stepCount2);
-//			stepCount2+= ystep;
-//		}
-//		
-//		err-= dy;
-//		
-//		//move y
-//		if (err < 0) {	
-//			if (steep) {
-//				moveHalfStep(2, stepCount2);
-//				stepCount2+= ystep;
-//			} else {
-//				moveHalfStep(1, stepCount1);
-//				stepCount1+= xstep;
-//			}			
-//			y+= ystep;
-//			err+= dx;
-//		}
-//		
-//		//delay once...
-//		delay_ms(delayTime);
-//		
-//		//send for new coordinates
-//		//do this once, halfway through the line
-//		if (x > (dx/2) && !send) {
-//			UDR = 56;
-//			send = 1;
-//		}
-//		
-//		//update pos
-//		pos.x = x;
-//		pos.y = y;
-//		
-//	}
-//	
-//	if (x1 == B.x && y1 == B.y) {
-//		//this means we have reached out destination.
-//		nextLineFlag = 0;
-//	}
-//	
-//	sleepMotors();
-//	
-//}
-
 
 
 void processUSART(void) {
@@ -248,13 +198,23 @@ void processUSART(void) {
 			B.y = (rxBuffer[7] | (rxBuffer[8]<<8));
 			break;
 		
-		//move
+		//single move
 		case 3:
 			line(pos.x, pos.y, (rxBuffer[1] | (rxBuffer[2]<<8)), (rxBuffer[3] | (rxBuffer[4]<<8)));
 			break;
 
-		//get pos, send pos coordinates
+		//multiple move
 		case 4:
+			nextLineFlag = 1;
+			A.x = LastB.x;
+			A.y = LastB.y;
+			B.x = (rxBuffer[1] | (rxBuffer[2]<<8));
+			B.y = (rxBuffer[3] | (rxBuffer[4]<<8));
+			
+			break;
+			
+		//get pos, send pos coordinates
+		case 5:
 			while ((UCSRA & (1 << UDRE)) == 0) {};
 			UDR = pos.x;
 			while ((UCSRA & (1 << UDRE)) == 0) {};
