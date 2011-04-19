@@ -52,92 +52,172 @@ ISR(USART_RXC_vect) {
 
 // MAIN FUNCTIONS
 
-void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
+/* - - - LINE - - -
+ 
+ thanks to RogueBasin for the meat of this Bresenham line algorithm
+ http://roguebasin.roguelikedevelopment.org/index.php?title=Bresenham%27s_Line_Algorithm
+ 
+ 
+ */
+
+void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1){
 	
-	int16_t steep = (abs(y1-y0) > abs(x1 -x0));
 	int8_t xstep = 1;
 	int8_t ystep = 1;
 	
-	if (y0 > y1) {
-		ystep = -1;
-	}
+	if (x0 > x1) xstep = -1;
+	if (y0 > y1) ystep = -1;
 	
-	if (x0 > x1) {
-		xstep = -1;
-	}
-
-	
-	if (steep) {
-		swap16(&x0, &y0);
-		swap16(&x1, &y1);
-	}
-	
-	if (x0 > x1) {
-		swap16(&x0, &x1);
-	}
-	
-
-	
-	int16_t dx = (int16_t) x1 - x0;
-	int16_t dy = (int16_t) abs(y1 - y0);
-	int16_t err = (int16_t) dx/2;
-	int16_t y = (int16_t) y0;
-	
-	wakeMotors();
-
-	uint8_t send = 0;
-	
-	uint16_t x;
-	for (x = x0; x < x1; x++) {
+	int16_t dx = abs(x1 - x0);
+	int16_t dy = abs(y1 - y0);
 		
-		//move x
-		if (steep) {
+	wakeMotors();
+	
+	//a boolean for sending for next coordiantes
+	uint8_t send = 0;
+		
+	if (dy <= dx) {
+		int16_t error = dy - dx;
+		
+		while (x0 != x1) {
+			if (error >= 0) {
+				if (error || (xstep > 0)) {
+					moveHalfStep(2, stepCount2);
+					stepCount2+= ystep;
+					y0+= xstep;
+					error-= dx;
+				}
+			}
+			
 			moveHalfStep(1, stepCount1);
 			stepCount1+= xstep;
-		} else {
+			
+			x0+= xstep;
+			error+= dy;
+			
+			//delay once...
+			delay_ms(delayTime);
+			
+			//send for new coordinates
+			//do this once, halfway through the line
+			if (abs(x0) > (dx/2) && !send) {
+				UDR = 56;
+				send = 1;
+			}
+			
+			//update pos
+			pos.x = x0;
+			pos.y = y0;
+			
+		}// end while
+	}
+	
+	//if dy > dx
+	else {
+		int error = dx - dy;
+		
+		while (y0 != y1) {
+			
+			
+			if (error >= 0) {
+				if (error || (ystep > 0)) {
+					moveHalfStep(1, stepCount1);
+					stepCount1+= xstep;
+					x0+= xstep;
+					error-= dy;
+				}
+			}
+			
 			moveHalfStep(2, stepCount2);
 			stepCount2+= ystep;
-		}
-		
-		err-= dy;
-		
-		//move y
-		if (err < 0) {	
-			if (steep) {
-				moveHalfStep(2, stepCount2);
-				stepCount2+= ystep;
-			} else {
-				moveHalfStep(1, stepCount1);
-				stepCount1+= xstep;
-			}			
-			y+= ystep;
-			err+= dx;
-		}
-		
-		//delay once...
-		delay_ms(delayTime);
-		
-		//send for new coordinates
-		//do this once, halfway through the line
-		if (x > (dx/2) && !send) {
-			UDR = 56;
-			send = 1;
-		}
-		
-		//update pos
-		pos.x = x;
-		pos.y = y;
-		
+			
+			y0 += ystep;
+			error += dx;
+			
+			//delay once...
+			delay_ms(delayTime);
+			
+			//send for new coordinates
+			//do this once, halfway through the line
+			if (abs(y0) > (dy/2) && !send) {
+				UDR = 56;
+				send = 1;
+			}
+			
+			//update pos
+			pos.x = x0;
+			pos.y = y0;
+			
+		}// end while
 	}
 	
 	if (x1 == B.x && y1 == B.y) {
-		//this means we have reached out destination.
+		//this means we have reached our destination.
 		nextLineFlag = 0;
 	}
 	
 	sleepMotors();
 	
 }
+
+//void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
+//	
+//	
+//	wakeMotors();
+//
+//	uint8_t send = 0;
+//	
+//	uint16_t x;
+//	for (x = x0; x < x1; x++) {
+//		
+//		//move x
+//		if (steep) {
+//			moveHalfStep(1, stepCount1);
+//			stepCount1+= xstep;
+//		} else {
+//			moveHalfStep(2, stepCount2);
+//			stepCount2+= ystep;
+//		}
+//		
+//		err-= dy;
+//		
+//		//move y
+//		if (err < 0) {	
+//			if (steep) {
+//				moveHalfStep(2, stepCount2);
+//				stepCount2+= ystep;
+//			} else {
+//				moveHalfStep(1, stepCount1);
+//				stepCount1+= xstep;
+//			}			
+//			y+= ystep;
+//			err+= dx;
+//		}
+//		
+//		//delay once...
+//		delay_ms(delayTime);
+//		
+//		//send for new coordinates
+//		//do this once, halfway through the line
+//		if (x > (dx/2) && !send) {
+//			UDR = 56;
+//			send = 1;
+//		}
+//		
+//		//update pos
+//		pos.x = x;
+//		pos.y = y;
+//		
+//	}
+//	
+//	if (x1 == B.x && y1 == B.y) {
+//		//this means we have reached out destination.
+//		nextLineFlag = 0;
+//	}
+//	
+//	sleepMotors();
+//	
+//}
 
 
 
