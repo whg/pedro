@@ -11,6 +11,7 @@ int main (void) {
 	
 	initUSART();
 	initMotors();
+	initPen();
 	initTimers();
 	sei();
 	
@@ -68,7 +69,7 @@ ISR(USART_RXC_vect) {
  
  */
 
-void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1){
+void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
 	
 	int8_t xstep = 1;
 	int8_t ystep = 1;
@@ -224,6 +225,16 @@ void processUSART(void) {
 			while ((UCSRA & (1 << UDRE)) == 0) {};
 			UDR = (pos.y>>8);
 			break;
+			
+		//move pen up
+		case 6:
+			penUp();
+			break;
+
+		//move pen down
+		case 7:
+			penDown();
+			break;
 
 			
 	}// end switch
@@ -326,6 +337,16 @@ void delay_ms(int d) {
 	}
 }
 
+// PEN FUNCTIONS
+
+void penUp(void) {
+	PEN_PORT &= ~(1<<PEN_PIN);
+}
+
+void penDown(void) {
+	PEN_PORT |= (1<<PEN_PIN);
+}
+
 // UTIL FUNCTIONS
 
 void swap16(uint16_t *a, uint16_t *b) {
@@ -359,12 +380,17 @@ void initMotors(void) {
 	M2_DDR  |= (1<<M2_PIN1) | (1<<M2_PIN2) | (1<<M2_PIN3) | (1<<M2_PIN4) | (1<<M2_ENABLE);
 	M2_PORT |= (1<<M2_PIN1) | (1<<M2_PIN2) | (1<<M2_PIN3) | (1<<M2_PIN4);
 	
-	//sleepmotors
-	M1_PORT &= ~(1<<M1_ENABLE);
-	M2_PORT &= ~(1<<M2_ENABLE);
+	sleepMotors();
 	
-	delayTime = 20;
+	delayTime = 6;
 }
+
+void initPen(void) {
+	
+	PEN_DDR |= (1<<PEN_PIN);
+	//start with pen up
+	penUp();
+}	
 
 void initTimers(void) {
 	

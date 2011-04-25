@@ -30,6 +30,10 @@
 #define M2_PIN4 PORTD7
 #define M2_ENABLE PORTD3
 
+#define PEN_PORT PORTD
+#define PEN_DDR DDRD
+#define PEN_PIN PORTD2
+
 #define RX_BUFFERSIZE 9
 
 #define LED_PORT PORTB
@@ -54,6 +58,7 @@ typedef struct {
 void initUSART(void);
 void initMotors(void);
 void initTimers(void);
+void initPen(void);
 
 
 // MAIN FUNCTIONS
@@ -64,6 +69,9 @@ void setMotors(void);
 void processUSART(void);
 void sleepMotors(void); //don't need to have two of these
 void wakeMotors(void);  //but i think it makes things clearer
+
+void penUp(void);
+void penDown(void);
 
 void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
 
