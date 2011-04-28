@@ -28,12 +28,17 @@ int main (void) {
 		
 		
 		if (nextLineFlag) {
+			LED_PORT &= ~(1<<LED_PIN);
 			
 			LastB.x = B.x;
 			LastB.y = B.y;
 			
 			line(A.x, A.y, B.x, B.y);
 		}
+		else {
+			LED_PORT |= (1<<LED_PIN);
+		}
+
 		
 	}
 	
@@ -79,6 +84,9 @@ void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
 	
 	int16_t dx = abs(x1 - x0);
 	int16_t dy = abs(y1 - y0);
+	
+	int16_t x = x0;
+	int16_t y = y0;
 		
 	wakeMotors();
 	
@@ -88,12 +96,12 @@ void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
 	if (dy <= dx) {
 		int16_t error = dy - dx;
 		
-		while (x0 != x1) {
+		while (x != x1) {
 			if (error >= 0) {
 				if (error || (xstep > 0)) {
 					moveHalfStep(2, stepCount2);
 					stepCount2+= ystep;
-					y0+= xstep;
+					y+= xstep;
 					error-= dx;
 				}
 			}
@@ -101,7 +109,7 @@ void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
 			moveHalfStep(1, stepCount1);
 			stepCount1+= xstep;
 			
-			x0+= xstep;
+			x+= xstep;
 			error+= dy;
 			
 			//delay once...
@@ -109,31 +117,29 @@ void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
 			
 			//send for new coordinates
 			//do this once, halfway through the line
-			if (abs(x0) > (dx/2) && !send) {
-				while ((UCSRA & (1 << UDRE)) == 0) {};
-				UDR = 56;
+			if (abs(x) > (dx/2) && !send) {
+				sendUSART(nextPos);
 				send = 1;
 			}
 			
 			//update pos
-			pos.x = x0;
-			pos.y = y0;
+			pos.x = x;
+			pos.y = y;
 			
 		}// end while
 	}
 	
 	//if dy > dx
 	else {
-		int error = dx - dy;
+		int16_t error = dx - dy;
 		
-		while (y0 != y1) {
-			
+		while (y != y1) {
 			
 			if (error >= 0) {
 				if (error || (ystep > 0)) {
 					moveHalfStep(1, stepCount1);
 					stepCount1+= xstep;
-					x0+= xstep;
+					x+= xstep;
 					error-= dy;
 				}
 			}
@@ -141,33 +147,44 @@ void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
 			moveHalfStep(2, stepCount2);
 			stepCount2+= ystep;
 			
-			y0 += ystep;
-			error += dx;
+			y+= ystep;
+			error+= dx;
 			
 			//delay once...
 			delay_ms(delayTime);
 			
 			//send for new coordinates
 			//do this once, halfway through the line
-			if (abs(y0) > (dy/2) && !send) {
-				while ((UCSRA & (1 << UDRE)) == 0) {};
-				UDR = 56;
+			if (abs(y) > (dy/2) && !send) {
+				sendUSART(nextPos);
 				send = 1;
 			}
 			
 			//update pos
-			pos.x = x0;
-			pos.y = y0;
+			pos.x = x;
+			pos.y = y;
 			
 		}// end while
 	}
 	
+	
+	//this is used by single lines
+//	if (nextLineFlag == 0) {
+//		sendUSART(done);
+//	}
+	
 	//check to see if we have reached destination...
+	//by this point B would have changed if there was a next coordiante
+	//as it is fetched in the middle of the line
 	if (x1 == B.x && y1 == B.y) {
 		nextLineFlag = 0;
+		sendUSART(done);
 	}
 	
 	sleepMotors();
+	
+	
+	
 	
 }
 
@@ -179,10 +196,12 @@ void processUSART(void) {
 		//change delay time
 		case 0:
 			delayTime = rxBuffer[1];
+			sendUSART(done);
 			break;
 			
 		//single line
 		case 1:
+			nextLineFlag = 0;
 			line((rxBuffer[1] | (rxBuffer[2]<<8)), (rxBuffer[3] | (rxBuffer[4]<<8)),
 					 (rxBuffer[5] | (rxBuffer[6]<<8)), (rxBuffer[7] | (rxBuffer[8]<<8)));
 			break;
@@ -201,6 +220,7 @@ void processUSART(void) {
 		
 		//single move
 		case 3:
+			nextLineFlag = 0;
 			line(pos.x, pos.y, (rxBuffer[1] | (rxBuffer[2]<<8)), (rxBuffer[3] | (rxBuffer[4]<<8)));
 			break;
 
@@ -212,34 +232,43 @@ void processUSART(void) {
 			B.x = (rxBuffer[1] | (rxBuffer[2]<<8));
 			B.y = (rxBuffer[3] | (rxBuffer[4]<<8));
 			
+			if (B.x == pos.x && B.y == pos.y) {
+				sendUSART(nextPos);
+			}
+			
 			break;
 			
 		//get pos, send pos coordinates
 		case 5:
-			while ((UCSRA & (1 << UDRE)) == 0) {};
-			UDR = pos.x;
-			while ((UCSRA & (1 << UDRE)) == 0) {};
-			UDR = (pos.x>>8);
-			while ((UCSRA & (1 << UDRE)) == 0) {};
-			UDR = pos.y;
-			while ((UCSRA & (1 << UDRE)) == 0) {};
-			UDR = (pos.y>>8);
+			sendUSART(pos.x);
+			sendUSART(pos.x>>8);
+			sendUSART(pos.y);
+			sendUSART(pos.y>>8);
+			
+			sendUSART(done);
 			break;
 			
 		//move pen up
 		case 6:
 			penUp();
+			sendUSART(done);
 			break;
 
 		//move pen down
 		case 7:
 			penDown();
+			sendUSART(done);
 			break;
 
 			
 	}// end switch
 	
 	
+}
+
+void sendUSART(uint8_t byte) {
+	while ((UCSRA & (1 << UDRE)) == 0) {};
+	UDR = byte;
 }
 
 void setMotors(void) { }
@@ -256,10 +285,10 @@ void wakeMotors(void) {
 
 
 //this function moves a specified motor half a step
-void moveHalfStep(char motor, int8_t stepCount) {
+void moveHalfStep(char motor, uint8_t stepCount) {
 	
 	
-	switch (stepCount) {
+	switch (stepCount % 8) {
 		case 0:
 			changeStep(motor, 1, 0, 0, 0);
 			break;
@@ -288,15 +317,15 @@ void moveHalfStep(char motor, int8_t stepCount) {
 	
 	//reset the step counts, if necessary
 	//this is not very nicely done...
-	if (stepCount1 == 8) {
-		stepCount1 = 0;
-	} else if (stepCount1 == -1) {
-		stepCount1 = 7;
-	} if (stepCount2 == 8) {
-		stepCount2 = 0;
-	} else if (stepCount2 == -1){
-		stepCount2 = 7;
-	}
+//	if (stepCount1 == 8) {
+//		stepCount1 = 0;
+//	} else if (stepCount1 == -1) {
+//		stepCount1 = 7;
+//	} if (stepCount2 == 8) {
+//		stepCount2 = 0;
+//	} else if (stepCount2 == -1){
+//		stepCount2 = 7;
+//	}
 	//end reset
 }
 
@@ -382,7 +411,7 @@ void initMotors(void) {
 	
 	sleepMotors();
 	
-	delayTime = 6;
+	delayTime = 16;
 }
 
 void initPen(void) {
@@ -396,6 +425,8 @@ void initTimers(void) {
 	
 	//set timer0 to prescale of 1024
 	TCCR0 |= (1<<CS00) | (1<<CS02);
+	
+	TCCR1B |= (1<<CS10) | (1<<CS12);
 	
 	//set timer2 to prescale of 1024
 	TCCR2 |= (1<<CS22) | (1<<CS21) | (1<<CS20);
