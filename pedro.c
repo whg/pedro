@@ -9,11 +9,13 @@
 
 int main (void) {
 	
+	LED_DDR |= (1<<LED_PIN);
+	LED_PORT &= ~(1<<LED_PIN);
+	
 	initUSART();
 	initMotors();
 	initPen();
 	initTimers();
-	inDelimiter = 0;
 	
 	sei();
 	
@@ -23,25 +25,61 @@ int main (void) {
 //	pos.y = 0;
 	
 	nextLineFlag = 0;
+	
 		
-	LED_DDR |= (1<<LED_PIN);
-	LED_PORT |= (1<<LED_PIN);
 	
 	while (1) {
 		
 		
-		if (nextLineFlag) {
-			LED_PORT &= ~(1<<LED_PIN);
+		if (decodeNext() == 1) {
+			//got next command to process
 			
-			LastB.x = B.x;
-			LastB.y = B.y;
+			LED_PORT |= (1<<LED_PIN); //LED on
 			
-			line(A.x, A.y, B.x, B.y);
-	
+			switch (currentCommand.commandCode) {
+				case COMMAND_CODE_PEN_UP:
+					movePenUp();
+					break;
+				case COMMAND_CODE_PEN_DOWN:
+					movePenDown();
+					break;
+				case COMMAND_CODE_MOVE_REL:
+					moveRel(currentCommand.command.moveRel.x, currentCommand.command.moveRel.y);
+					break;
+				case COMMAND_CODE_MOVE_ABS:
+					moveAbs(currentCommand.command.moveAbs.x, currentCommand.command.moveAbs.y);
+					break;
+				default:
+					break;
+			}
+			
+			
+			//turn LED off
+			//LED_PORT |= (1<<LED_PIN);
+
 		}
+				
 		else {
-			LED_PORT |= (1<<LED_PIN);
+			//no commands to process
+			
+			
+			//if idle for a while turn motors off...
 		}
+
+
+		
+//		if (nextLineFlag) {
+//			LED_PORT &= ~(1<<LED_PIN);
+//			
+//			LastB.x = B.x;
+//			LastB.y = B.y;
+//			
+//			line(A.x, A.y, B.x, B.y);
+//	
+//		}
+//		else {
+//			LED_PORT |= (1<<LED_PIN);
+//		}
 
 		
 	}
@@ -54,20 +92,26 @@ int main (void) {
 
 ISR(USART_RXC_vect) {
 	
+	//LED_PORT ^= (1<<LED_PIN);
+	
 	//check to see if we are ready to read a byte
-	if ((UCSRA & (1 << RXC)) == 0) return; 
+	while ((UCSRA & (1 << RXC)) == 0) {}; 
 	
 //	rxBuffer[rxbc] = UDR;
 	
 	uint8_t byte = UDR;
 	
-	if (byte == SERIAL_DLE && !inDelimiter) {
-		inDelimiter = 1;
-	}
-	else {
-		rxBufferPush(UDR);
-		inDelimiter = 0;
-	}
+//	if (byte == SERIAL_DLE && !inDelimiter) {
+//		inDelimiter = 1;
+//	}
+//	else {
+//		rxBufferPush(byte);
+//		inDelimiter = 0;
+//	}
+	
+	rxBufferPush(byte);
+	
+	sendUSART('*');
 	
 }
 
@@ -76,7 +120,7 @@ uint8_t rxBufferSize() {
 	
 	//disable interrupts
 	//so that head or tail values don't change due to serial interrupt
-	cli();
+	//cli();
 	
 	if (head >= tail) {
 		return head - tail;
@@ -85,7 +129,7 @@ uint8_t rxBufferSize() {
 		return RX_BUFFERSIZE - (tail - head);
 	}
 	
-	sei();
+	//sei();
 
 }
 
@@ -130,10 +174,14 @@ uint8_t decodeNext(void) {
 	//if less than 3 it doesn't have a start, end and middle...
 	if (currentSize < 3) return 0;
 	
+	sendUSART('a');
+	
 	if (rxBufferPeek(0) != SERIAL_STX) {
 		rxBufferDiscard(1);
 		return 0;
 	}
+	
+	sendUSART('b');
 	
 	uint8_t commandCode = rxBufferPeek(1);
 	uint8_t messageLength = 0;
@@ -162,15 +210,21 @@ uint8_t decodeNext(void) {
 		return 0;
 	}
 	
+	sendUSART('c');
+	
 	//if the full message hasn't arrived, wait...
 	if (currentSize < messageLength) {
 		return 0;
 	}
 	
+	sendUSART('d');
+	
 	if (rxBufferPeek(messageLength-1) != SERIAL_ETX)  {
 		rxBufferDiscard(1);
 		return 0;
 	}
+	
+	sendUSART('e');
 	
 	currentCommand.commandCode = commandCode;
 	
@@ -182,10 +236,8 @@ uint8_t decodeNext(void) {
 			//same here...
 			break;
 		case COMMAND_CODE_MOVE_ABS:
-			currentCommand.command.moveAbs.x0 = (rxBufferPeek(2) | (rxBufferPeek(3)<<8));
-			currentCommand.command.moveAbs.y0 = (rxBufferPeek(4) | (rxBufferPeek(5)<<8));
-			currentCommand.command.moveAbs.x1 = (rxBufferPeek(6) | (rxBufferPeek(7)<<8));
-			currentCommand.command.moveAbs.y1 = (rxBufferPeek(8) | (rxBufferPeek(9)<<8));
+			currentCommand.command.moveAbs.x = (rxBufferPeek(2) | (rxBufferPeek(3)<<8));
+			currentCommand.command.moveAbs.y = (rxBufferPeek(4) | (rxBufferPeek(5)<<8));
 			break;
 		case COMMAND_CODE_MOVE_REL:
 			currentCommand.command.moveRel.x = (rxBufferPeek(2) | (rxBufferPeek(3)<<8));
@@ -196,13 +248,49 @@ uint8_t decodeNext(void) {
 			break;
 	}
 	
+	int i;
+	for (i = 0; i < messageLength; i++) {
+		uint8_t byte = rxBufferPeek(i);
+		
+		uint8_t nibble;
+		nibble = byte >> 4;
+		if (nibble >= 10) {
+			nibble+= ('A'-10);
+		}
+		else {
+			nibble+= '0';
+		}
+		
+		sendUSART(nibble);
+		
+		nibble = byte & 15;
+		if (nibble >= 10) nibble+= ('A'-10);
+		else nibble+= '0';
+		sendUSART(nibble);
+				
+							
+	}
+	
+	
 	
 	rxBufferDiscard(messageLength);
+	sendUSART('z');
 	return 1;
+	
 	
 	
 }
 
+
+void moveAbs(uint16_t x, uint16_t y) {
+	sendUSART('m');
+	line(pos.x, pos.y, x, y);
+	sendUSART('n');
+}
+
+void moveRel(int16_t x, int16_t y) {
+	line(pos.x, pos.y, ((uint16_t)((int16_t)pos.x)+x), ((uint16_t)((int16_t)pos.y)+y));
+}
 
 
 //void popUSART(void) {
@@ -221,12 +309,12 @@ uint8_t decodeNext(void) {
 //}
 
 
-uint8_t peekMessageBuffer(uint8_t offset) {
-
-	uint8_t p = (tail+offset) % RX_BUFFERSIZE;
-	return rxBuffer[p];
-	
-}
+//uint8_t peekMessageBuffer(uint8_t offset) {
+//
+//	uint8_t p = (tail+offset) % RX_BUFFERSIZE;
+//	return rxBuffer[p];
+//	
+//}
 
 //void getNext(void) {
 //	
@@ -440,13 +528,13 @@ void processUSART(void) {
 			
 		//move pen up
 		case 6:
-			penUp();
+			//penUp();
 			sendUSART(done);
 			break;
 
 		//move pen down
 		case 7:
-			penDown();
+			//penDown();
 			sendUSART(done);
 			break;
 			
@@ -546,11 +634,11 @@ void delay_ms(int d) {
 
 // PEN FUNCTIONS
 
-void penUp(void) {
+void movePenUp(void) {
 	PEN_PORT &= ~(1<<PEN_PIN);
 }
 
-void penDown(void) {
+void movePenDown(void) {
 	PEN_PORT |= (1<<PEN_PIN);
 }
 
@@ -596,7 +684,7 @@ void initPen(void) {
 	
 	PEN_DDR |= (1<<PEN_PIN);
 	//start with pen up
-	penUp();
+	//movePenUp();
 }	
 
 void initTimers(void) {

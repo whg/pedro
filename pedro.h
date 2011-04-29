@@ -84,21 +84,19 @@ typedef struct {
 } COMMAND_PEN_UP;
 
 #define COMMAND_CODE_MOVE_ABS 2
-#define MESSAGE_LENGTH_MOVE_ABS 11
+#define MESSAGE_LENGTH_MOVE_ABS 7
 
 typedef struct {
-	uint16_t x0;
-	uint16_t y0;
-	uint16_t x1;
-	uint16_t y1;
+	uint16_t x;
+	uint16_t y;
 } COMMAND_MOVE_ABS;
 
 #define COMMAND_CODE_MOVE_REL 3
 #define MESSAGE_LENGTH_MOVE_REL 7
 
 typedef struct {
-	uint16_t x;
-	uint16_t y;
+	int16_t x;
+	int16_t y;
 } COMMAND_MOVE_REL;
 
 typedef union {
@@ -123,6 +121,11 @@ uint8_t decodeNext(void);
 
 COMMAND_DESCRIPTOR currentCommand;
 
+void moveAbs(uint16_t x, uint16_t y);
+void moveRel(int16_t x, int16_t y);
+
+// - - -
+
 
 const uint8_t nextPos = 56;
 const uint8_t done = 64;
@@ -144,8 +147,8 @@ void processUSART(void);
 void sleepMotors(void); //don't need to have two of these
 void wakeMotors(void);  //but i think it makes things clearer
 
-void penUp(void);
-void penDown(void);
+void movePenUp(void);
+void movePenDown(void);
 
 void sendUSART(uint8_t byte);
 
@@ -175,5 +178,5 @@ volatile uint8_t mmmb;
 
 volatile uint8_t inDelimiter;
 
-void pushMessageBuffer(uint8_t byte);
-uint8_t peekMessageBuffer(uint8_t offset);
+//void pushMessageBuffer(uint8_t byte);
+//uint8_t peekMessageBuffer(uint8_t offset);
