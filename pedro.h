@@ -35,7 +35,7 @@
 #define PEN_DDR DDRD
 #define PEN_PIN PORTD2
 
-#define RX_BUFFERSIZE 90
+#define RX_BUFFERSIZE 180
 
 #define LED_PORT PORTB
 #define LED_PIN PORTB0
@@ -44,6 +44,7 @@
 #define RX_PACKET_SIZE 9
 #define RX_BUFFER_FULL 5
 #define RECEIVED_RX_PACKET 6
+#define RX_SEND_NEXT 7
 
 
 #define MOVE 4
@@ -99,11 +100,32 @@ typedef struct {
 	int16_t y;
 } COMMAND_MOVE_REL;
 
+#define COMMAND_CODE_GET_POS 4
+#define MESSAGE_LENGTH_GET_POS 3
+
+typedef struct {
+} COMMAND_GET_POS;
+
+#define COMMAND_CODE_QUERY_DELAYED 5
+#define MESSAGE_LENGTH_QUERY_DELAYED 3
+
+typedef struct {
+} COMMAND_QUERY_DELAYED;
+
+#define COMMAND_CODE_EXECUTE_DELAYED 6
+#define MESSAGE_LENGTH_EXECUTE_DELAYED 3
+
+typedef struct {
+} COMMAND_EXECUTE_DELAYED;
+
 typedef union {
 	COMMAND_PEN_DOWN penDown;
 	COMMAND_PEN_UP penUp;
 	COMMAND_MOVE_ABS moveAbs;
 	COMMAND_MOVE_REL moveRel;	
+	COMMAND_GET_POS getPos;
+	COMMAND_QUERY_DELAYED queryDelayed;
+	COMMAND_EXECUTE_DELAYED executeDelayed;
 } COMMAND;
 	
 typedef struct {
@@ -123,6 +145,18 @@ COMMAND_DESCRIPTOR currentCommand;
 
 void moveAbs(uint16_t x, uint16_t y);
 void moveRel(int16_t x, int16_t y);
+void sendPos(void);
+
+volatile uint8_t rxDelayedCounter;
+volatile uint8_t rxDelayedBuffer[RX_BUFFERSIZE];
+volatile uint8_t rxDelayedNoCommands;
+volatile uint8_t rxDelayedIndex;
+uint8_t doDelayedBuffer;
+
+void addToDelayedBuffer(uint8_t byte);
+uint8_t executeDelayedBuffer(void);
+
+void send16(uint16_t thing);
 
 // - - -
 
@@ -152,7 +186,7 @@ void movePenDown(void);
 
 void sendUSART(uint8_t byte);
 
-void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
+void lineTo(uint16_t x1, uint16_t y1);
 
 // UTIL FUNCTIONS
 void swap16(uint16_t *a, uint16_t *b);
@@ -168,8 +202,6 @@ uint8_t	count;
 volatile uint8_t rxBuffer[RX_BUFFERSIZE]; //this holds all the serial data
 volatile uint8_t head, tail;
 volatile uint8_t rxbc; // rx buffer counter
-
-volatile uint8_t instructions[RX_BUFFERSIZE];
 
 volatile uint8_t delayTime;
 volatile uint8_t nextLineFlag;

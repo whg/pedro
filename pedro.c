@@ -11,52 +11,56 @@ int main (void) {
 	
 	LED_DDR |= (1<<LED_PIN);
 	LED_PORT &= ~(1<<LED_PIN);
-	
+		
 	initUSART();
 	initMotors();
 	initPen();
 	initTimers();
 	
+	head = 1;
+	tail = 0;
+	
 	sei();
-	
-	
-	//set up postion
-//	pos.x = 0;
-//	pos.y = 0;
-	
-	nextLineFlag = 0;
-	
-		
-	
+
 	while (1) {
 		
+		decodeNext();
 		
-		if (decodeNext() == 1) {
-			//got next command to process
-			
-			LED_PORT |= (1<<LED_PIN); //LED on
-			
-			switch (currentCommand.commandCode) {
-				case COMMAND_CODE_PEN_UP:
-					movePenUp();
-					break;
-				case COMMAND_CODE_PEN_DOWN:
-					movePenDown();
-					break;
-				case COMMAND_CODE_MOVE_REL:
-					moveRel(currentCommand.command.moveRel.x, currentCommand.command.moveRel.y);
-					break;
-				case COMMAND_CODE_MOVE_ABS:
-					moveAbs(currentCommand.command.moveAbs.x, currentCommand.command.moveAbs.y);
-					break;
-				default:
-					break;
-			}
-			
-			
-			//turn LED off
-			//LED_PORT |= (1<<LED_PIN);
+		if (doDelayedBuffer) {
 
+			if (executeDelayedBuffer() == 1) { 
+				//got next command to process
+				
+				
+				LED_PORT |= (1<<LED_PIN); //LED on
+				
+				switch (currentCommand.commandCode) {
+					case COMMAND_CODE_PEN_UP:
+						movePenUp();
+						break;
+					case COMMAND_CODE_PEN_DOWN:
+						movePenDown();
+						break;
+					case COMMAND_CODE_MOVE_REL:
+						moveRel(currentCommand.command.moveRel.x, currentCommand.command.moveRel.y);
+						break;
+					case COMMAND_CODE_MOVE_ABS:
+						moveAbs(currentCommand.command.moveAbs.x, currentCommand.command.moveAbs.y);
+						break;
+					case COMMAND_CODE_GET_POS:
+						sendPos();
+						break;
+
+						
+					default:
+						break;
+				}
+				
+				
+				//turn LED off
+				//LED_PORT |= (1<<LED_PIN);
+
+			}
 		}
 				
 		else {
@@ -65,22 +69,7 @@ int main (void) {
 			
 			//if idle for a while turn motors off...
 		}
-
-
-		
-//		if (nextLineFlag) {
-//			LED_PORT &= ~(1<<LED_PIN);
-//			
-//			LastB.x = B.x;
-//			LastB.y = B.y;
-//			
-//			line(A.x, A.y, B.x, B.y);
-//	
-//		}
-//		else {
-//			LED_PORT |= (1<<LED_PIN);
-//		}
-
+ 
 		
 	}
 	
@@ -94,24 +83,26 @@ ISR(USART_RXC_vect) {
 	
 	//LED_PORT ^= (1<<LED_PIN);
 	
-	//check to see if we are ready to read a byte
-	while ((UCSRA & (1 << RXC)) == 0) {}; 
+//	if (UCSRA & (1 << DOR)) {
+//		sendUSART('*');
+//	}
+//	
+//	if (UCSRA & (1<<PE)) {
+//		sendUSART('p');
+//	}
+//	
+//	if (UCSRA & (1<<FE)) {
+//		sendUSART('f');
+//	}
 	
-//	rxBuffer[rxbc] = UDR;
+	
+	//check to see if we are ready to read a byte
+//	while ((UCSRA & (1 << RXC)) != 0) {
+//		
+//	}; 
 	
 	uint8_t byte = UDR;
-	
-//	if (byte == SERIAL_DLE && !inDelimiter) {
-//		inDelimiter = 1;
-//	}
-//	else {
-//		rxBufferPush(byte);
-//		inDelimiter = 0;
-//	}
-	
 	rxBufferPush(byte);
-	
-	sendUSART('*');
 	
 }
 
@@ -120,6 +111,7 @@ uint8_t rxBufferSize() {
 	
 	//disable interrupts
 	//so that head or tail values don't change due to serial interrupt
+	//uint8_t sreg = SREG;
 	//cli();
 	
 	if (head >= tail) {
@@ -129,7 +121,8 @@ uint8_t rxBufferSize() {
 		return RX_BUFFERSIZE - (tail - head);
 	}
 	
-	//sei();
+	//set status register to original, i.e. enable interrupts
+	//SREG = sreg;
 
 }
 
@@ -142,47 +135,83 @@ uint8_t rxBufferPeek(uint8_t offset) {
 
 void rxBufferDiscard(uint8_t n) {
 
+	uint8_t sreg = SREG;
 	cli();
 	
 	tail+= n;
 	tail%= RX_BUFFERSIZE;
 	
-	sei();
-	
+	SREG = sreg;
 }
 	
 
 void rxBufferPush(uint8_t b) {
 	
-	rxBuffer[head] = b;
+	uint8_t next = (head+1)%RX_BUFFERSIZE;
 
-	head++;
-	head %= RX_BUFFERSIZE;
-	
-	// If head meets tail we have overrun, so nudge tail and lose the oldest byte
-	if (head == tail) {
-		tail++;
-		tail %= RX_BUFFERSIZE;
+	if (tail == next) {
+		sendUSART('!');
+		//throw away byte, buffer full
+		return;
 	}
 	
+	rxBuffer[head] = b;
+	head = next;
+	
+	
+//	head++;
+//	head %= RX_BUFFERSIZE;
+	
+	
+	// If head meets tail we have overrun, so nudge tail and lose the oldest byte
+//	if (next == tail) {
+//		tail++;
+//		tail %= RX_BUFFERSIZE;
+//	}
+
+}
+
+void dumpBuffer(void) {
+	int i;
+	for (i = 0; i < rxBufferSize(); i++) {
+		uint8_t byte = rxBufferPeek(i);
+		
+		uint8_t nibble;
+		nibble = byte >> 4;
+		if (nibble >= 10) {
+			nibble+= ('A'-10);
+		}
+		else {
+			nibble+= '0';
+		}
+		
+		sendUSART(nibble);
+		
+		nibble = byte & 15;
+		if (nibble >= 10) nibble+= ('A'-10);
+		else nibble+= '0';
+		sendUSART(nibble);	
+	}
 }
 
 uint8_t decodeNext(void) {
+	
 
 	uint8_t currentSize = rxBufferSize();
 	
 	//if less than 3 it doesn't have a start, end and middle...
 	if (currentSize < 3) return 0;
-	
-	sendUSART('a');
-	
+		
 	if (rxBufferPeek(0) != SERIAL_STX) {
+//		sendUSART('d');
+//		sendUSART('d');
+//		sendUSART('d');
+//		sendUSART('d');
+//		dumpBuffer();
 		rxBufferDiscard(1);
-		return 0;
+		return 0; 
 	}
-	
-	sendUSART('b');
-	
+		
 	uint8_t commandCode = rxBufferPeek(1);
 	uint8_t messageLength = 0;
 	
@@ -199,33 +228,40 @@ uint8_t decodeNext(void) {
 		case COMMAND_CODE_MOVE_REL:
 			messageLength = MESSAGE_LENGTH_MOVE_REL;
 			break;
-			
+		case COMMAND_CODE_GET_POS:
+			messageLength = MESSAGE_LENGTH_GET_POS;
+			break;
+		case COMMAND_CODE_QUERY_DELAYED:
+			messageLength = MESSAGE_LENGTH_QUERY_DELAYED;
+			break;
+		case COMMAND_CODE_EXECUTE_DELAYED:
+			messageLength = MESSAGE_LENGTH_EXECUTE_DELAYED;
+			break;
+
 		default:
 			break;
 	}
 	
+	//sendUSART('a');
+	
 	//if couldn't classify message discard and return
 	if (messageLength == 0) {
-		rxBufferPeek(1);
+		rxBufferDiscard(1);
+		sendUSART('e');
 		return 0;
 	}
-	
-	sendUSART('c');
-	
+		
 	//if the full message hasn't arrived, wait...
 	if (currentSize < messageLength) {
 		return 0;
 	}
-	
-	sendUSART('d');
-	
+		
 	if (rxBufferPeek(messageLength-1) != SERIAL_ETX)  {
 		rxBufferDiscard(1);
+		sendUSART('f');
 		return 0;
 	}
-	
-	sendUSART('e');
-	
+		
 	currentCommand.commandCode = commandCode;
 	
 	switch (commandCode) {
@@ -243,101 +279,159 @@ uint8_t decodeNext(void) {
 			currentCommand.command.moveRel.x = (rxBufferPeek(2) | (rxBufferPeek(3)<<8));
 			currentCommand.command.moveRel.y = (rxBufferPeek(4) | (rxBufferPeek(5)<<8));
 			break;
+		case COMMAND_CODE_GET_POS:
+			//no parameters here...
+			break;
+		
+		case COMMAND_CODE_QUERY_DELAYED:
+			sendUSART(rxDelayedNoCommands);
+			rxBufferDiscard(messageLength);
+			return 1;
+			break;
+
+		case COMMAND_CODE_EXECUTE_DELAYED:
+			doDelayedBuffer = 1;
+			rxBufferDiscard(messageLength);
+			return 1;
+			break;
+
+		default:
+			break;
+	}
+	
+	//add all the bytes to the delayed buffer
+	int i;
+	for (i = 0; i < messageLength; i++) {
+		addToDelayedBuffer(rxBufferPeek(i));
+	}
+	
+	//one more command
+	rxDelayedNoCommands++;
+	 	
+	rxBufferDiscard(messageLength);
+	return 1;
+
+}
+
+void addToDelayedBuffer(uint8_t byte) {
+		
+	if (rxDelayedCounter >= RX_BUFFERSIZE - 2) {
+		sendUSART(RX_BUFFER_FULL);
+	}
+	else {
+		rxDelayedBuffer[rxDelayedCounter] = byte;
+		rxDelayedCounter++;
+	}
+
+	
+}
+
+uint8_t delayedBufferPeek(uint8_t index, uint8_t offset) {
+	return rxDelayedBuffer[index+offset];
+}
+
+uint8_t executeDelayedBuffer(void) {
+
+	if (delayedBufferPeek(rxDelayedIndex, 0) != SERIAL_STX) {
+		rxDelayedIndex++;
+		return 0; 
+	}
+	
+	uint8_t commandCode = delayedBufferPeek(rxDelayedIndex, 1);
+	uint8_t messageLength = 0;
+	
+	switch (commandCode) {
+		case COMMAND_CODE_PEN_DOWN:
+			messageLength = MESSAGE_LENGTH_PEN_DOWN;
+			break;
+		case COMMAND_CODE_PEN_UP:
+			messageLength = MESSAGE_LENGTH_PEN_UP;
+			break;
+		case COMMAND_CODE_MOVE_ABS:
+			messageLength = MESSAGE_LENGTH_MOVE_ABS;
+			break;
+		case COMMAND_CODE_MOVE_REL:
+			messageLength = MESSAGE_LENGTH_MOVE_REL;
+			break;
+		case COMMAND_CODE_GET_POS:
+			messageLength = MESSAGE_LENGTH_GET_POS;
+			break;
 			
 		default:
 			break;
 	}
 	
-	int i;
-	for (i = 0; i < messageLength; i++) {
-		uint8_t byte = rxBufferPeek(i);
-		
-		uint8_t nibble;
-		nibble = byte >> 4;
-		if (nibble >= 10) {
-			nibble+= ('A'-10);
-		}
-		else {
-			nibble+= '0';
-		}
-		
-		sendUSART(nibble);
-		
-		nibble = byte & 15;
-		if (nibble >= 10) nibble+= ('A'-10);
-		else nibble+= '0';
-		sendUSART(nibble);
-				
-							
+	//if couldn't classify message discard and return
+	if (messageLength == 0) {
+		rxDelayedIndex++;
+		sendUSART('e');
+		return 0;
 	}
 	
+	if (delayedBufferPeek(rxDelayedIndex, (messageLength-1)) != SERIAL_ETX)  {
+		rxDelayedIndex++;
+		sendUSART('f');
+		return 0;
+	}
 	
+	currentCommand.commandCode = commandCode;
 	
-	rxBufferDiscard(messageLength);
-	sendUSART('z');
+	switch (commandCode) {
+		case COMMAND_CODE_PEN_DOWN:
+			//nothing here, as pen down has no parameters
+			break;
+		case COMMAND_CODE_PEN_UP:
+			//same here...
+			break;
+		case COMMAND_CODE_MOVE_ABS:
+			currentCommand.command.moveAbs.x = (delayedBufferPeek(rxDelayedIndex, 2) | (delayedBufferPeek(rxDelayedIndex, 3)<<8));
+			currentCommand.command.moveAbs.y = (delayedBufferPeek(rxDelayedIndex, 4) | (delayedBufferPeek(rxDelayedIndex, 5)<<8));
+			break;
+		case COMMAND_CODE_MOVE_REL:
+			currentCommand.command.moveRel.x = (delayedBufferPeek(rxDelayedIndex, 2) | (delayedBufferPeek(rxDelayedIndex, 3)<<8));
+			currentCommand.command.moveRel.y = (delayedBufferPeek(rxDelayedIndex, 2) | (delayedBufferPeek(rxDelayedIndex, 3)<<8));
+			break;
+		case COMMAND_CODE_GET_POS:
+			//no parameters here...
+			break;
+			
+		default:
+			break;
+	}
+	
+	//rxBufferDiscard(messageLength);
+	rxDelayedIndex+= messageLength;
+	
+	if (rxDelayedIndex >= rxDelayedCounter) {
+		doDelayedBuffer = 0;
+		rxDelayedIndex = 0;
+		rxDelayedCounter = 0;
+		rxDelayedNoCommands = 0;
+		sendUSART(RX_SEND_NEXT);
+	}
 	return 1;
-	
 	
 	
 }
 
 
 void moveAbs(uint16_t x, uint16_t y) {
-	sendUSART('m');
-	line(pos.x, pos.y, x, y);
-	sendUSART('n');
+	lineTo(x, y);
 }
 
 void moveRel(int16_t x, int16_t y) {
-	line(pos.x, pos.y, ((uint16_t)((int16_t)pos.x)+x), ((uint16_t)((int16_t)pos.y)+y));
+	//line(pos.x, pos.y, ((uint16_t)((int16_t)pos.x)+x), ((uint16_t)((int16_t)pos.y)+y));
 }
 
+void sendPos(void) {
+	
+	sendUSART(pos.x);
+	sendUSART(pos.x>>8);
+	sendUSART(pos.y);
+	sendUSART(pos.y>>8);
+	
+}
 
-//void popUSART(void) {
-//
-//	//disable interrupts
-//	cli();
-//	
-//u	tail++;
-//	
-//	if (tail >= RX_BUFFERSIZE) {
-//		tail = 0;
-//	}
-//	
-//	//and now enable
-//	sei();  
-//}
-
-
-//uint8_t peekMessageBuffer(uint8_t offset) {
-//
-//	uint8_t p = (tail+offset) % RX_BUFFERSIZE;
-//	return rxBuffer[p];
-//	
-//}
-
-//void getNext(void) {
-//	
-//	if (peekUSART(0) == MOVE) {
-//	
-//	//	A.x = (peekUSART(1) | (peekUSART(2) << 8));
-//	//	A.y = (peekUSART(3) | (peekUSART(4) << 8));
-//		A.x = LastB.x;
-//		A.y = LastB.y;
-//		B.x = (peekUSART(1) | (peekUSART(2) << 8));
-//		B.y = (peekUSART(3) | (peekUSART(4) << 8));
-//		LastB.x = B.x;
-//		LastB.y = B.y;
-//		
-//		nextLineFlag = 1;
-//		
-//		for (int i = 0; i < RX_PACKET_SIZE; i++) {
-//			popUSART();
-//		}
-//		
-//	}
-//	
-//}
 
 
 // MAIN FUNCTIONS
@@ -346,10 +440,16 @@ void moveRel(int16_t x, int16_t y) {
  
  thanks to RogueBasin for the meat of this Bresenham line algorithm
  http://roguebasin.roguelikedevelopment.org/index.php?title=Bresenham%27s_Line_Algorithm
+ it needed a little touching up though...
  
  */
 
-void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
+void lineTo(uint16_t x1, uint16_t y1) {
+	
+	uint16_t x0 = pos.x;
+	uint16_t y0 = pos.y;
+	
+	// - - -
 	
 	int8_t xstep = 1;
 	int8_t ystep = 1;
@@ -364,10 +464,7 @@ void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
 	int16_t y = y0;
 		
 	wakeMotors();
-	
-	//a boolean for sending for next coordiantes
-	uint8_t send = 0;
-		
+
 	if (dy <= dx) {
 		int16_t error = dy - dx;
 		
@@ -376,7 +473,7 @@ void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
 				if (error || (xstep > 0)) {
 					moveHalfStep(2, stepCount2);
 					stepCount2+= ystep;
-					y+= xstep;
+					y+= ystep;
 					error-= dx;
 				}
 			}
@@ -390,19 +487,17 @@ void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
 			//delay once...
 			delay_ms(delayTime);
 			
-			//send for new coordinates
-			//do this once, halfway through the line
-			if (abs(x) > (dx/2) && !send) {
-				//sendUSART(nextPos);
-				//getNext();
-				send = 1;
-			}
-			
 			//update pos
 			pos.x = x;
 			pos.y = y;
 			
 		}// end while
+		
+		//a little readjustment, as algorithm is quite right...
+		if (x0 > x1) {
+			y+= ystep;
+			pos.y = y;
+		}		
 	}
 	
 	//if dy > dx
@@ -429,119 +524,140 @@ void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
 			//delay once...
 			delay_ms(delayTime);
 			
-			//send for new coordinates
-			//do this once, halfway through the line
-			if (abs(y) > (dy/2) && !send) {
-				//sendUSART(nextPos);
-				send = 1;
-			}
 			
 			//update pos
 			pos.x = x;
 			pos.y = y;
 			
 		}// end while
+		
+		if (y1 < y0) {
+			x+= xstep;
+			pos.x = x;
+		}
 	}
-	
-	
-	//this is used by single lines
-//	if (nextLineFlag == 0) {
-//		sendUSART(done);
-//	}
-	
-	//check to see if we have reached destination...
-	//by this point B would have changed if there was a next coordiante
-	//as it is fetched in the middle of the line
-	if (x1 == B.x && y1 == B.y) {
-		nextLineFlag = 0;
-		sendUSART(done);
-	}
-	
+
+
 	sleepMotors();
 	
-	//if roughly halfway through 6 points
-//	if (pos.x == P[2].x && pos.y == P[2].y) {
-//		sendUSART(34);
-//	}
 	
 }
 
-
-void processUSART(void) {
+void send16(uint16_t thing) {
 	
-	switch (rxBuffer[0]) {
-			
-		//change delay time
-		case 0:
-			delayTime = rxBuffer[1];
-			sendUSART(done);
-			break;
-			
-		//single line
-		case 1:
-			nextLineFlag = 0;
-			line((rxBuffer[1] | (rxBuffer[2]<<8)), (rxBuffer[3] | (rxBuffer[4]<<8)),
-					 (rxBuffer[5] | (rxBuffer[6]<<8)), (rxBuffer[7] | (rxBuffer[8]<<8)));
-			break;
-			
-		//multiple lines
-		case 2:
-			//assume we have multiple lines
-			nextLineFlag = 1;
-						
-			//set point A and B
-			A.x = (rxBuffer[1] | (rxBuffer[2]<<8));
-			A.y = (rxBuffer[3] | (rxBuffer[4]<<8));
-			B.x = (rxBuffer[5] | (rxBuffer[6]<<8));
-			B.y = (rxBuffer[7] | (rxBuffer[8]<<8));
-			break;
-		
-		//single move
-		case 3:
-			nextLineFlag = 0;
-			line(pos.x, pos.y, (rxBuffer[1] | (rxBuffer[2]<<8)), (rxBuffer[3] | (rxBuffer[4]<<8)));
-			break;
+	sendUSART('-');
 
-		//multiple move
-		case MOVE:
-			nextLineFlag = 1;
-			A.x = LastB.x;
-			A.y = LastB.y;
-			B.x = (rxBuffer[1] | (rxBuffer[2]<<8));
-			B.y = (rxBuffer[3] | (rxBuffer[4]<<8));
-			
-			if (B.x == pos.x && B.y == pos.y) {
-				sendUSART(nextPos);
-			}
-			
-			break;
-			
-		//get pos, send pos coordinates
-		case 5:
-			sendUSART(pos.x);
-			sendUSART(pos.x>>8);
-			sendUSART(pos.y);
-			sendUSART(pos.y>>8);
-			
-			sendUSART(done);
-			break;
-			
-		//move pen up
-		case 6:
-			//penUp();
-			sendUSART(done);
-			break;
-
-		//move pen down
-		case 7:
-			//penDown();
-			sendUSART(done);
-			break;
-			
-	}// end switch
+	uint8_t byte = (thing>>8);
 	
+	uint8_t nibble;
+	nibble = byte >> 4;
+	if (nibble >= 10) {
+		nibble+= ('A'-10);
+	}
+	else {
+		nibble+= '0';
+	}
 	
+	sendUSART(nibble);
+	
+	nibble = byte & 15;
+	if (nibble >= 10) nibble+= ('A'-10);
+	else nibble+= '0';
+	sendUSART(nibble);	
+	
+	byte = thing;
+	nibble = byte >> 4;
+	if (nibble >= 10) {
+		nibble+= ('A'-10);
+	}
+	else {
+		nibble+= '0';
+	}
+	
+	sendUSART(nibble);
+	
+	nibble = byte & 15;
+	if (nibble >= 10) nibble+= ('A'-10);
+	else nibble+= '0';
+	sendUSART(nibble);
 }
+
+
+//void processUSART(void) {
+//	
+//	switch (rxBuffer[0]) {
+//			
+//		//change delay time
+//		case 0:
+//			delayTime = rxBuffer[1];
+//			sendUSART(done);
+//			break;
+//			
+//		//single line
+//		case 1:
+//			nextLineFlag = 0;
+//			//line((rxBuffer[1] | (rxBuffer[2]<<8)), (rxBuffer[3] | (rxBuffer[4]<<8)),
+//				//	 (rxBuffer[5] | (rxBuffer[6]<<8)), (rxBuffer[7] | (rxBuffer[8]<<8)));
+//			break;
+//			
+//		//multiple lines
+//		case 2:
+//			//assume we have multiple lines
+//			nextLineFlag = 1;
+//						
+//			//set point A and B
+//			A.x = (rxBuffer[1] | (rxBuffer[2]<<8));
+//			A.y = (rxBuffer[3] | (rxBuffer[4]<<8));
+//			B.x = (rxBuffer[5] | (rxBuffer[6]<<8));
+//			B.y = (rxBuffer[7] | (rxBuffer[8]<<8));
+//			break;
+//		
+//		//single move
+//		case 3:
+//			nextLineFlag = 0;
+//			line(pos.x, pos.y, (rxBuffer[1] | (rxBuffer[2]<<8)), (rxBuffer[3] | (rxBuffer[4]<<8)));
+//			break;
+//
+//		//multiple move
+//		case MOVE:
+//			nextLineFlag = 1;
+//			A.x = LastB.x;
+//			A.y = LastB.y;
+//			B.x = (rxBuffer[1] | (rxBuffer[2]<<8));
+//			B.y = (rxBuffer[3] | (rxBuffer[4]<<8));
+//			
+//			if (B.x == pos.x && B.y == pos.y) {
+//				sendUSART(nextPos);
+//			}
+//			
+//			break;
+//			
+//		//get pos, send pos coordinates
+//		case 5:
+//			sendUSART(pos.x);
+//			sendUSART(pos.x>>8);
+//			sendUSART(pos.y);
+//			sendUSART(pos.y>>8);
+//			
+//			sendUSART(done);
+//			break;
+//			
+//		//move pen up
+//		case 6:
+//			//penUp();
+//			sendUSART(done);
+//			break;
+//
+//		//move pen down
+//		case 7:
+//			//penDown();
+//			sendUSART(done);
+//			break;
+//			
+//	}// end switch
+//	
+//	
+//}
 
 void sendUSART(uint8_t byte) {
 	while ((UCSRA & (1 << UDRE)) == 0) {};
@@ -636,10 +752,12 @@ void delay_ms(int d) {
 
 void movePenUp(void) {
 	PEN_PORT &= ~(1<<PEN_PIN);
+	LED_PORT &= ~(1<<LED_PIN);
 }
 
 void movePenDown(void) {
 	PEN_PORT |= (1<<PEN_PIN);
+	LED_PORT |= (1<<LED_PIN);
 }
 
 // UTIL FUNCTIONS
