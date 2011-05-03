@@ -1,0 +1,161 @@
+// !$*UTF8*$!
+{
+	4079523D0CEA382200E202DC /* Project object */ = {
+		activeBuildConfigurationName = Release;
+		activeTarget = 407952600CEA391500E202DC /* firmware */;
+		addToTargets = (
+		);
+		codeSenseManager = EEB8226613703F1400811E61 /* Code sense */;
+		perUserDictionary = {
+			PBXConfiguration.PBXFileTableDataSource3.PBXFileTableDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXFileDataSource_Filename_ColumnID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					341,
+					20,
+					48,
+					43,
+					43,
+					20,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXFileDataSource_FiletypeID,
+					PBXFileDataSource_Filename_ColumnID,
+					PBXFileDataSource_Built_ColumnID,
+					PBXFileDataSource_ObjectSize_ColumnID,
+					PBXFileDataSource_Errors_ColumnID,
+					PBXFileDataSource_Warnings_ColumnID,
+					PBXFileDataSource_Target_ColumnID,
+				);
+			};
+			PBXPerProjectTemplateStateSaveDate = 326123311;
+			PBXWorkspaceStateSaveDate = 326123311;
+		};
+		perUserProjectItems = {
+			EEB82284137042E600811E61 /* PBXTextBookmark */ = EEB82284137042E600811E61 /* PBXTextBookmark */;
+			EEB82285137042E600811E61 /* PBXTextBookmark */ = EEB82285137042E600811E61 /* PBXTextBookmark */;
+		};
+		sourceControlManager = EEB8226513703F1400811E61 /* Source Control */;
+		userBuildSettings = {
+		};
+	};
+	407952600CEA391500E202DC /* firmware */ = {
+		activeExec = 0;
+	};
+	EEB8226513703F1400811E61 /* Source Control */ = {
+		isa = PBXSourceControlManager;
+		fallbackIsa = XCSourceControlManager;
+		isSCMEnabled = 0;
+		scmConfiguration = {
+			repositoryNamesForRoots = {
+				"" = "";
+			};
+		};
+	};
+	EEB8226613703F1400811E61 /* Code sense */ = {
+		isa = PBXCodeSenseManager;
+		indexTemplatePath = "";
+	};
+	EEB8227A13703F9300811E61 /* makefile */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {698, 637}}";
+			sepNavSelRange = "{838, 0}";
+			sepNavVisRange = "{461, 630}";
+		};
+	};
+	EEB8227C13703F9300811E61 /* pedro.h */ = {
+		isa = PBXFileReference;
+		fileEncoding = 4;
+		lastKnownFileType = sourcecode.c.h;
+		name = pedro.h;
+		path = "/Users/WHG/Documents/UNI/2nd year/Project/pedro/pedro.h";
+		sourceTree = "<absolute>";
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {720, 2912}}";
+			sepNavSelRange = "{3710, 20}";
+			sepNavVisRange = "{3603, 315}";
+		};
+	};
+	EEB8227F1370403300811E61 /* main.c */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {880, 3237}}";
+			sepNavSelRange = "{4024, 0}";
+			sepNavVisRange = "{1023, 1051}";
+		};
+	};
+	EEB822801370408600811E61 /* main.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {788, 1066}}";
+			sepNavSelRange = "{28, 0}";
+			sepNavVisRange = "{0, 1092}";
+		};
+	};
+	EEB822811370410900811E61 /* line.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {788, 741}}";
+			sepNavSelRange = "{67, 0}";
+			sepNavVisRange = "{0, 177}";
+		};
+	};
+	EEB822821370410900811E61 /* line.c */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {788, 1261}}";
+			sepNavSelRange = "{144, 0}";
+			sepNavVisRange = "{0, 930}";
+		};
+	};
+	EEB82284137042E600811E61 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = EEB8227C13703F9300811E61 /* pedro.h */;
+		rLen = 1;
+		rLoc = 201;
+		rType = 1;
+	};
+	EEB82285137042E600811E61 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = EEB8227C13703F9300811E61 /* pedro.h */;
+		name = "pedro.h: 202";
+		rLen = 20;
+		rLoc = 3710;
+		rType = 0;
+		vrLen = 315;
+		vrLoc = 3603;
+	};
+	EEB822881370435F00811E61 /* commands.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {788, 1040}}";
+			sepNavSelRange = "{58, 0}";
+			sepNavVisRange = "{0, 1025}";
+			sepNavWindowFrame = "{{15, 4}, {790, 873}}";
+		};
+	};
+	EEB82289137044A500811E61 /* motors.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {788, 741}}";
+			sepNavSelRange = "{71, 0}";
+			sepNavVisRange = "{0, 330}";
+		};
+	};
+	EEB8228A137044A500811E61 /* motors.c */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {788, 1118}}";
+			sepNavSelRange = "{306, 0}";
+			sepNavVisRange = "{0, 1093}";
+		};
+	};
+	EEB8228B137045A900811E61 /* usart.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {788, 741}}";
+			sepNavSelRange = "{92, 0}";
+			sepNavVisRange = "{0, 856}";
+		};
+	};
+	EEB8228C137045A900811E61 /* usart.c */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {788, 2912}}";
+			sepNavSelRange = "{19, 0}";
+			sepNavVisRange = "{0, 794}";
+		};
+	};
+}
