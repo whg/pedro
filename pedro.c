@@ -1,4 +1,4 @@
-
+ 
 
 ///////////////////////////////
 // - - pedro - - - - - - - - //
@@ -28,12 +28,9 @@ int main (void) {
 		
 		if (doDelayedBuffer) {
 
-			if (executeDelayedBuffer() == 1) { 
+			if (executeDelayedBuffer()) { 
 				//got next command to process
-				
-				
-				LED_PORT |= (1<<LED_PIN); //LED on
-				
+	
 				switch (currentCommand.commandCode) {
 					case COMMAND_CODE_PEN_UP:
 						movePenUp();
@@ -47,8 +44,8 @@ int main (void) {
 					case COMMAND_CODE_MOVE_ABS:
 						moveAbs(currentCommand.command.moveAbs.x, currentCommand.command.moveAbs.y);
 						break;
-					case COMMAND_CODE_GET_POS:
-						sendPos();
+					case COMMAND_CODE_CHANGE_STEP_DELAY:
+						changeStepDelay(currentCommand.command.changeDelay.time);
 						break;
 
 						
@@ -56,9 +53,6 @@ int main (void) {
 						break;
 				}
 				
-				
-				//turn LED off
-				//LED_PORT |= (1<<LED_PIN);
 
 			}
 		}
@@ -81,26 +75,6 @@ int main (void) {
 
 ISR(USART_RXC_vect) {
 	
-	//LED_PORT ^= (1<<LED_PIN);
-	
-//	if (UCSRA & (1 << DOR)) {
-//		sendUSART('*');
-//	}
-//	
-//	if (UCSRA & (1<<PE)) {
-//		sendUSART('p');
-//	}
-//	
-//	if (UCSRA & (1<<FE)) {
-//		sendUSART('f');
-//	}
-	
-	
-	//check to see if we are ready to read a byte
-//	while ((UCSRA & (1 << RXC)) != 0) {
-//		
-//	}; 
-	
 	uint8_t byte = UDR;
 	rxBufferPush(byte);
 	
@@ -108,12 +82,7 @@ ISR(USART_RXC_vect) {
 
 
 uint8_t rxBufferSize() {
-	
-	//disable interrupts
-	//so that head or tail values don't change due to serial interrupt
-	//uint8_t sreg = SREG;
-	//cli();
-	
+
 	if (head >= tail) {
 		return head - tail;
 	} 
@@ -121,9 +90,6 @@ uint8_t rxBufferSize() {
 		return RX_BUFFERSIZE - (tail - head);
 	}
 	
-	//set status register to original, i.e. enable interrupts
-	//SREG = sreg;
-
 }
 
 uint8_t rxBufferPeek(uint8_t offset) {
@@ -150,49 +116,15 @@ void rxBufferPush(uint8_t b) {
 	uint8_t next = (head+1)%RX_BUFFERSIZE;
 
 	if (tail == next) {
-		sendUSART('!');
 		//throw away byte, buffer full
 		return;
 	}
 	
 	rxBuffer[head] = b;
 	head = next;
-	
-	
-//	head++;
-//	head %= RX_BUFFERSIZE;
-	
-	
-	// If head meets tail we have overrun, so nudge tail and lose the oldest byte
-//	if (next == tail) {
-//		tail++;
-//		tail %= RX_BUFFERSIZE;
-//	}
 
 }
 
-void dumpBuffer(void) {
-	int i;
-	for (i = 0; i < rxBufferSize(); i++) {
-		uint8_t byte = rxBufferPeek(i);
-		
-		uint8_t nibble;
-		nibble = byte >> 4;
-		if (nibble >= 10) {
-			nibble+= ('A'-10);
-		}
-		else {
-			nibble+= '0';
-		}
-		
-		sendUSART(nibble);
-		
-		nibble = byte & 15;
-		if (nibble >= 10) nibble+= ('A'-10);
-		else nibble+= '0';
-		sendUSART(nibble);	
-	}
-}
 
 uint8_t decodeNext(void) {
 	
@@ -203,11 +135,6 @@ uint8_t decodeNext(void) {
 	if (currentSize < 3) return 0;
 		
 	if (rxBufferPeek(0) != SERIAL_STX) {
-//		sendUSART('d');
-//		sendUSART('d');
-//		sendUSART('d');
-//		sendUSART('d');
-//		dumpBuffer();
 		rxBufferDiscard(1);
 		return 0; 
 	}
@@ -237,17 +164,17 @@ uint8_t decodeNext(void) {
 		case COMMAND_CODE_EXECUTE_DELAYED:
 			messageLength = MESSAGE_LENGTH_EXECUTE_DELAYED;
 			break;
+		case COMMAND_CODE_CHANGE_STEP_DELAY:
+			messageLength = MESSAGE_LENGTH_CHANGE_STEP_DELAY;
+			break;
 
 		default:
 			break;
 	}
-	
-	//sendUSART('a');
-	
+		
 	//if couldn't classify message discard and return
 	if (messageLength == 0) {
 		rxBufferDiscard(1);
-		sendUSART('e');
 		return 0;
 	}
 		
@@ -258,31 +185,17 @@ uint8_t decodeNext(void) {
 		
 	if (rxBufferPeek(messageLength-1) != SERIAL_ETX)  {
 		rxBufferDiscard(1);
-		sendUSART('f');
 		return 0;
 	}
 		
 	currentCommand.commandCode = commandCode;
 	
 	switch (commandCode) {
-		case COMMAND_CODE_PEN_DOWN:
-			//nothing here, as pen down has no parameters
-			break;
-		case COMMAND_CODE_PEN_UP:
-			//same here...
-			break;
-		case COMMAND_CODE_MOVE_ABS:
-			currentCommand.command.moveAbs.x = (rxBufferPeek(2) | (rxBufferPeek(3)<<8));
-			currentCommand.command.moveAbs.y = (rxBufferPeek(4) | (rxBufferPeek(5)<<8));
-			break;
-		case COMMAND_CODE_MOVE_REL:
-			currentCommand.command.moveRel.x = (rxBufferPeek(2) | (rxBufferPeek(3)<<8));
-			currentCommand.command.moveRel.y = (rxBufferPeek(4) | (rxBufferPeek(5)<<8));
-			break;
 		case COMMAND_CODE_GET_POS:
-			//no parameters here...
-			break;
-		
+			sendPos();
+			rxBufferDiscard(messageLength);
+			return 1;
+			
 		case COMMAND_CODE_QUERY_DELAYED:
 			sendUSART(rxDelayedNoCommands);
 			rxBufferDiscard(messageLength);
@@ -293,13 +206,14 @@ uint8_t decodeNext(void) {
 			doDelayedBuffer = 1;
 			rxBufferDiscard(messageLength);
 			return 1;
-			break;
 
 		default:
 			break;
 	}
 	
-	//add all the bytes to the delayed buffer
+	//if we get here...
+	//...add all the bytes to the delayed buffer
+	//so that they get processed when we start...
 	int i;
 	for (i = 0; i < messageLength; i++) {
 		addToDelayedBuffer(rxBufferPeek(i));
@@ -314,13 +228,12 @@ uint8_t decodeNext(void) {
 }
 
 void addToDelayedBuffer(uint8_t byte) {
-		
-	if (rxDelayedCounter >= RX_BUFFERSIZE - 2) {
+	
+	rxDelayedBuffer[rxDelayedCounter] = byte;
+	rxDelayedCounter++;
+	
+	if (rxDelayedCounter >= RX_BUFFERSIZE - 1) {
 		sendUSART(RX_BUFFER_FULL);
-	}
-	else {
-		rxDelayedBuffer[rxDelayedCounter] = byte;
-		rxDelayedCounter++;
 	}
 
 	
@@ -356,7 +269,10 @@ uint8_t executeDelayedBuffer(void) {
 		case COMMAND_CODE_GET_POS:
 			messageLength = MESSAGE_LENGTH_GET_POS;
 			break;
-			
+		case COMMAND_CODE_CHANGE_STEP_DELAY:
+			messageLength = MESSAGE_LENGTH_CHANGE_STEP_DELAY;
+			break;
+
 		default:
 			break;
 	}
@@ -364,13 +280,13 @@ uint8_t executeDelayedBuffer(void) {
 	//if couldn't classify message discard and return
 	if (messageLength == 0) {
 		rxDelayedIndex++;
-		sendUSART('e');
+//		sendUSART('e');
 		return 0;
 	}
 	
 	if (delayedBufferPeek(rxDelayedIndex, (messageLength-1)) != SERIAL_ETX)  {
 		rxDelayedIndex++;
-		sendUSART('f');
+		//sendUSART('f');
 		return 0;
 	}
 	
@@ -394,6 +310,10 @@ uint8_t executeDelayedBuffer(void) {
 		case COMMAND_CODE_GET_POS:
 			//no parameters here...
 			break;
+		case COMMAND_CODE_CHANGE_STEP_DELAY:
+			currentCommand.command.changeDelay.time = delayedBufferPeek(rxDelayedIndex, 2);
+			break;
+
 			
 		default:
 			break;
@@ -449,6 +369,11 @@ void lineTo(uint16_t x1, uint16_t y1) {
 	uint16_t x0 = pos.x;
 	uint16_t y0 = pos.y;
 	
+//	send16(pos.x);
+//	send16(pos.y);
+//	send16(x1);
+//	send16(y1);
+	
 	// - - -
 	
 	int8_t xstep = 1;
@@ -471,14 +396,14 @@ void lineTo(uint16_t x1, uint16_t y1) {
 		while (x != x1) {
 			if (error >= 0) {
 				if (error || (xstep > 0)) {
-					moveHalfStep(2, stepCount2);
+					moveHalfStep(2);
 					stepCount2+= ystep;
 					y+= ystep;
 					error-= dx;
 				}
 			}
 			
-			moveHalfStep(1, stepCount1);
+			moveHalfStep(1);
 			stepCount1+= xstep;
 			
 			x+= xstep;
@@ -493,7 +418,7 @@ void lineTo(uint16_t x1, uint16_t y1) {
 			
 		}// end while
 		
-		//a little readjustment, as algorithm is quite right...
+		//a little readjustment, as algorithm isn't quite right...
 		if (x0 > x1) {
 			y+= ystep;
 			pos.y = y;
@@ -508,14 +433,14 @@ void lineTo(uint16_t x1, uint16_t y1) {
 			
 			if (error >= 0) {
 				if (error || (ystep > 0)) {
-					moveHalfStep(1, stepCount1);
+					moveHalfStep(1);
 					stepCount1+= xstep;
 					x+= xstep;
 					error-= dy;
 				}
 			}
 			
-			moveHalfStep(2, stepCount2);
+			moveHalfStep(2);
 			stepCount2+= ystep;
 			
 			y+= ystep;
@@ -540,6 +465,11 @@ void lineTo(uint16_t x1, uint16_t y1) {
 
 	sleepMotors();
 	
+//	send16(pos.x);
+//	send16(pos.y);
+	
+	pos.x = x1;
+	pos.y = y1;
 	
 }
 
@@ -583,88 +513,10 @@ void send16(uint16_t thing) {
 }
 
 
-//void processUSART(void) {
-//	
-//	switch (rxBuffer[0]) {
-//			
-//		//change delay time
-//		case 0:
-//			delayTime = rxBuffer[1];
-//			sendUSART(done);
-//			break;
-//			
-//		//single line
-//		case 1:
-//			nextLineFlag = 0;
-//			//line((rxBuffer[1] | (rxBuffer[2]<<8)), (rxBuffer[3] | (rxBuffer[4]<<8)),
-//				//	 (rxBuffer[5] | (rxBuffer[6]<<8)), (rxBuffer[7] | (rxBuffer[8]<<8)));
-//			break;
-//			
-//		//multiple lines
-//		case 2:
-//			//assume we have multiple lines
-//			nextLineFlag = 1;
-//						
-//			//set point A and B
-//			A.x = (rxBuffer[1] | (rxBuffer[2]<<8));
-//			A.y = (rxBuffer[3] | (rxBuffer[4]<<8));
-//			B.x = (rxBuffer[5] | (rxBuffer[6]<<8));
-//			B.y = (rxBuffer[7] | (rxBuffer[8]<<8));
-//			break;
-//		
-//		//single move
-//		case 3:
-//			nextLineFlag = 0;
-//			line(pos.x, pos.y, (rxBuffer[1] | (rxBuffer[2]<<8)), (rxBuffer[3] | (rxBuffer[4]<<8)));
-//			break;
-//
-//		//multiple move
-//		case MOVE:
-//			nextLineFlag = 1;
-//			A.x = LastB.x;
-//			A.y = LastB.y;
-//			B.x = (rxBuffer[1] | (rxBuffer[2]<<8));
-//			B.y = (rxBuffer[3] | (rxBuffer[4]<<8));
-//			
-//			if (B.x == pos.x && B.y == pos.y) {
-//				sendUSART(nextPos);
-//			}
-//			
-//			break;
-//			
-//		//get pos, send pos coordinates
-//		case 5:
-//			sendUSART(pos.x);
-//			sendUSART(pos.x>>8);
-//			sendUSART(pos.y);
-//			sendUSART(pos.y>>8);
-//			
-//			sendUSART(done);
-//			break;
-//			
-//		//move pen up
-//		case 6:
-//			//penUp();
-//			sendUSART(done);
-//			break;
-//
-//		//move pen down
-//		case 7:
-//			//penDown();
-//			sendUSART(done);
-//			break;
-//			
-//	}// end switch
-//	
-//	
-//}
-
 void sendUSART(uint8_t byte) {
 	while ((UCSRA & (1 << UDRE)) == 0) {};
 	UDR = byte;
 }
-
-void setMotors(void) { }
 
 void sleepMotors(void) {
 	M1_PORT &= ~(1<<M1_ENABLE);
@@ -678,8 +530,16 @@ void wakeMotors(void) {
 
 
 //this function moves a specified motor half a step
-void moveHalfStep(char motor, uint8_t stepCount) {
+void moveHalfStep(char motor) {
 	
+	uint8_t stepCount;
+	
+	if (motor == 1) {
+		stepCount = stepCount1;
+	}
+	else {
+		stepCount = stepCount2;
+	}
 	
 	switch (stepCount % 8) {
 		case 0:
@@ -760,6 +620,10 @@ void movePenDown(void) {
 	LED_PORT |= (1<<LED_PIN);
 }
 
+void changeStepDelay(uint8_t ms) {
+	delayTime = ms;
+}
+
 // UTIL FUNCTIONS
 
 void swap16(uint16_t *a, uint16_t *b) {
@@ -793,7 +657,7 @@ void initMotors(void) {
 	M2_DDR  |= (1<<M2_PIN1) | (1<<M2_PIN2) | (1<<M2_PIN3) | (1<<M2_PIN4) | (1<<M2_ENABLE);
 	M2_PORT |= (1<<M2_PIN1) | (1<<M2_PIN2) | (1<<M2_PIN3) | (1<<M2_PIN4);
 	
-	sleepMotors();
+	wakeMotors();
 	
 	delayTime = 16;
 }

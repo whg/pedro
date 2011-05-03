@@ -118,14 +118,19 @@ typedef struct {
 typedef struct {
 } COMMAND_EXECUTE_DELAYED;
 
+#define COMMAND_CODE_CHANGE_STEP_DELAY 7
+#define MESSAGE_LENGTH_CHANGE_STEP_DELAY 4
+
+typedef struct {
+	uint8_t time;
+} COMMAND_CHANGE_DELAY;
+
 typedef union {
 	COMMAND_PEN_DOWN penDown;
 	COMMAND_PEN_UP penUp;
 	COMMAND_MOVE_ABS moveAbs;
 	COMMAND_MOVE_REL moveRel;	
-	COMMAND_GET_POS getPos;
-	COMMAND_QUERY_DELAYED queryDelayed;
-	COMMAND_EXECUTE_DELAYED executeDelayed;
+	COMMAND_CHANGE_DELAY changeDelay;
 } COMMAND;
 	
 typedef struct {
@@ -158,6 +163,8 @@ uint8_t executeDelayedBuffer(void);
 
 void send16(uint16_t thing);
 
+void changeStepDelay(uint8_t ms);
+
 // - - -
 
 
@@ -175,7 +182,7 @@ void initPen(void);
 // MAIN FUNCTIONS
 void changeStep(char motor, char p1, char p2, char p3, char p4);
 void delay_ms(int d);
-void moveHalfStep(char motor, uint8_t stepCount);
+void moveHalfStep(char motor);
 void setMotors(void);
 void processUSART(void);
 void sleepMotors(void); //don't need to have two of these
