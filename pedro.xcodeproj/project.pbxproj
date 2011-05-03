@@ -24,8 +24,8 @@
 			isa = PBXGroup;
 			children = (
 				EEB8227A13703F9300811E61 /* makefile */,
-				EEB8227F1370403300811E61 /* main.c */,
 				EEB822801370408600811E61 /* main.h */,
+				EEB8227F1370403300811E61 /* main.c */,
 				EEB822811370410900811E61 /* line.h */,
 				EEB822821370410900811E61 /* line.c */,
 				EEB822881370435F00811E61 /* commands.h */,

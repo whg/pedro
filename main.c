@@ -11,15 +11,18 @@ int main (void) {
 	initPen();
 	initTimers();
 	
-	head = 1;
-	tail = 0;
+	rHead = 1;
+	rTail = 0;
+	
+	cHead = 0;
+	cTail = 0;
 	
 	sei(); 
 	while (1) {
 		
 		decodeNext();
 		
-		if (doDelayedBuffer) {
+		if (doCommands) {
 			
 			if (executeDelayedBuffer()) { 
 				//got next command to process
@@ -76,12 +79,12 @@ ISR(USART_RXC_vect) {
 
 uint8_t executeDelayedBuffer(void) {
 	
-	if (delayedBufferPeek(rxDelayedIndex, 0) != SERIAL_STX) {
-		rxDelayedIndex++;
+	if (commandBufferPop() != SERIAL_STX) {
+		sendUSART(COMMAND_BUFFER_N0_STX_ERROR); 
 		return 0; 
 	}
 	
-	uint8_t commandCode = delayedBufferPeek(rxDelayedIndex, 1);
+	uint8_t commandCode = commandBufferPop();
 	uint8_t messageLength = 0;
 	
 	switch (commandCode) {
@@ -103,6 +106,10 @@ uint8_t executeDelayedBuffer(void) {
 		case COMMAND_CODE_CHANGE_STEP_DELAY:
 			messageLength = MESSAGE_LENGTH_CHANGE_STEP_DELAY;
 			break;
+		case COMMAND_CODE_FINISH:
+			messageLength = MESSAGE_LENGTH_FINISH;
+			break;
+
 			
 		default:
 			break;
@@ -110,16 +117,10 @@ uint8_t executeDelayedBuffer(void) {
 	
 	//if couldn't classify message discard and return
 	if (messageLength == 0) {
-		rxDelayedIndex++;
-		//		sendUSART('e');
+		sendUSART(COMMAND_BUFFER_LENGTH_ERROR);
 		return 0;
 	}
 	
-	if (delayedBufferPeek(rxDelayedIndex, (messageLength-1)) != SERIAL_ETX)  {
-		rxDelayedIndex++;
-		//sendUSART('f');
-		return 0;
-	}
 	
 	currentCommand.commandCode = commandCode;
 	
@@ -131,35 +132,60 @@ uint8_t executeDelayedBuffer(void) {
 			//same here...
 			break;
 		case COMMAND_CODE_MOVE_ABS:
-			currentCommand.command.moveAbs.x = (delayedBufferPeek(rxDelayedIndex, 2) | (delayedBufferPeek(rxDelayedIndex, 3)<<8));
-			currentCommand.command.moveAbs.y = (delayedBufferPeek(rxDelayedIndex, 4) | (delayedBufferPeek(rxDelayedIndex, 5)<<8));
+			currentCommand.command.moveAbs.x = (commandBufferPop() | (commandBufferPop()<<8));
+			currentCommand.command.moveAbs.y = (commandBufferPop() | (commandBufferPop()<<8));
 			break;
 		case COMMAND_CODE_MOVE_REL:
-			currentCommand.command.moveRel.x = (delayedBufferPeek(rxDelayedIndex, 2) | (delayedBufferPeek(rxDelayedIndex, 3)<<8));
-			currentCommand.command.moveRel.y = (delayedBufferPeek(rxDelayedIndex, 2) | (delayedBufferPeek(rxDelayedIndex, 3)<<8));
+			currentCommand.command.moveRel.x = (commandBufferPop() | (commandBufferPop()<<8));
+			currentCommand.command.moveRel.y = (commandBufferPop() | (commandBufferPop()<<8));
 			break;
 		case COMMAND_CODE_GET_POS:
 			//no parameters here...
 			break;
 		case COMMAND_CODE_CHANGE_STEP_DELAY:
-			currentCommand.command.changeDelay.time = delayedBufferPeek(rxDelayedIndex, 2);
+			currentCommand.command.changeDelay.time = commandBufferPop();
 			break;
 			
-			
+		case COMMAND_CODE_FINISH:
+			doCommands = 0;
+			noCommands = 0;
+			break;
+
 		default:
 			break;
 	}
 	
-	//rxBufferDiscard(messageLength);
-	rxDelayedIndex+= messageLength;
 	
-	if (rxDelayedIndex >= rxDelayedCounter) {
-		doDelayedBuffer = 0;
-		rxDelayedIndex = 0;
-		rxDelayedCounter = 0;
-		rxDelayedNoCommands = 0;
-		sendUSART(RX_SEND_NEXT);
+	if ((commandCounter == 20) && !lastLot) {
+		//stop all motor action
+		doCommands = 0;
+		
+		//reset counter
+		commandCounter = 0;
+		
+		//send for next lot
+		sendUSART(SEND_FOR_NEXT_COMMANDS);
+		
+		commandBufferReset();
+		return 0;
 	}
+	
+	commandCounter++;
+
+	//pop off the DTX
+	commandBufferPop();
+	
+	
+//	//rxBufferDiscard(messageLength);
+//	rxDelayedIndex+= messageLength;
+//	
+//	if (rxDelayedIndex >= rxDelayedCounter) {
+//		doDelayedBuffer = 0;
+//		rxDelayedIndex = 0;
+//		rxDelayedCounter = 0;
+//		rxDelayedNoCommands = 0;
+//		sendUSART(RX_SEND_NEXT);
+//	}
 	return 1;
 	
 	

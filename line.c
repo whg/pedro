@@ -7,6 +7,12 @@ void lineTo(uint16_t x, uint16_t y) {
 	//now make sure that we got to destination, ie force it.
 	pos.x = x;
 	pos.y = y;
+	
+	sendUSART(121);
+	sendUSART16(x);
+	sendUSART16(y);
+	sendUSART16(pos.x);
+	sendUSART16(pos.y);
 }
 
 void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
