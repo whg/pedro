@@ -51,10 +51,10 @@ void commandBufferPush(uint8_t byte) {
 	if (cTail == next) {
 		sendUSART(COMMAND_BUFFER_FULL);
 	}
-	//else {
+	else {
 		commandBuffer[cHead] = byte;
 		cHead = next;
-	//}
+	}
 	
 }
 
@@ -152,27 +152,33 @@ uint8_t decodeNext(void) {
 		case COMMAND_CODE_GET_POS:
 			sendPos();
 			rxBufferDiscard(messageLength);
-			return 1;
+			return 0;
 			
 		case COMMAND_CODE_QUERY_DELAYED:
 			sendUSART(noCommands);
 			rxBufferDiscard(messageLength);
-			return 1;
+			return 0;
 			
-		case COMMAND_CODE_EXECUTE_COMMANDS:
-			doCommands = 1;
-			rxBufferDiscard(messageLength);
-			return 1;
+//		case COMMAND_CODE_EXECUTE_COMMANDS:
+//			doCommands = 1;
+//			rxBufferDiscard(messageLength);
+//			return 1;
 			
 		case COMMAND_CODE_LAST_LOT:
 			lastLot = rxBufferPeek(2);
 			rxBufferDiscard(messageLength);
-			return 1;
+			return 0;
 
 		case COMMAND_CODE_NUM_COMMANDS:
-			numCommands = rxBufferPeek(2);
+			numCommands = (rxBufferPeek(2) | (rxBufferPeek(3)<<8));
 			rxBufferDiscard(messageLength);
-			return 1;
+			return 0;
+			
+		case COMMAND_CODE_FINISH:
+			sendUSART(PLOTTER_FINISHED_DRAWING);
+			rxBufferDiscard(messageLength);
+			return 0;
+
 
 		default:
 			break;
@@ -187,11 +193,13 @@ uint8_t decodeNext(void) {
 	}
 	
 	//one more command
-	noCommands++;
+	//noCommands++;
 	
-	sendUSART(99);
-	sendUSART(messageLength);
-	sendUSART(noCommands);
+//	sendUSART(99);
+//	sendUSART(messageLength);
+//	sendUSART(noCommands);
+	
+//	delay_ms(1);
 	
 	rxBufferDiscard(messageLength);
 	return 1;

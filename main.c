@@ -18,39 +18,42 @@ int main (void) {
 	cTail = 0;
 	
 	sei(); 
-	while (1) {
+	
+	for (;;) {
 		
-		decodeNext();
+		while (!decodeNext()) {}
 		
-		if (doCommands) {
+		//if (doCommands) {
 			
-			if (executeDelayedBuffer()) { 
-				//got next command to process
-				
-				switch (currentCommand.commandCode) {
-					case COMMAND_CODE_PEN_UP:
-						movePenUp();
-						break;
-					case COMMAND_CODE_PEN_DOWN:
-						movePenDown();
-						break;
-					case COMMAND_CODE_MOVE_REL:
-						moveRel(currentCommand.command.moveRel.x, currentCommand.command.moveRel.y);
-						break;
-					case COMMAND_CODE_MOVE_ABS:
-						moveAbs(currentCommand.command.moveAbs.x, currentCommand.command.moveAbs.y);
-						break;
-					case COMMAND_CODE_CHANGE_STEP_DELAY:
-						changeStepDelay(currentCommand.command.changeDelay.time);
-						break;
-						
-						
-					default:
-						break;
-				}
-				
-				
+		if (executeDelayedBuffer()) { 
+			//got next command to process
+			
+			switch (currentCommand.commandCode) {
+				case COMMAND_CODE_PEN_UP:
+					movePenUp();
+					break;
+				case COMMAND_CODE_PEN_DOWN:
+					movePenDown();
+					break;
+				case COMMAND_CODE_MOVE_REL:
+					moveRel(currentCommand.command.moveRel.x, currentCommand.command.moveRel.y);
+					break;
+				case COMMAND_CODE_MOVE_ABS:
+					moveAbs(currentCommand.command.moveAbs.x, currentCommand.command.moveAbs.y);
+					break;
+				case COMMAND_CODE_CHANGE_STEP_DELAY:
+					changeStepDelay(currentCommand.command.changeDelay.time);
+					break;
+					
+					
+				default:
+					break;
 			}
+			
+			housekeep();
+				
+				
+			//}
 		}
 		
 		else {
@@ -109,6 +112,9 @@ uint8_t executeDelayedBuffer(void) {
 		case COMMAND_CODE_FINISH:
 			messageLength = MESSAGE_LENGTH_FINISH;
 			break;
+		case COMMAND_CODE_EXECUTE_COMMANDS:
+			messageLength = MESSAGE_LENGTH_EXECUTE_COMMANDS;
+			break;
 
 			
 		default:
@@ -150,30 +156,37 @@ uint8_t executeDelayedBuffer(void) {
 			doCommands = 0;
 			noCommands = 0;
 			break;
+			
+		case COMMAND_CODE_EXECUTE_COMMANDS:
+			doCommands = 1;
+			break;
+
 
 		default:
 			break;
 	}
 	
-	
-	if ((commandCounter == 20) && !lastLot) {
-		//stop all motor action
-		doCommands = 0;
-		
-		//reset counter
-		commandCounter = 0;
-		
-		//send for next lot
-		sendUSART(SEND_FOR_NEXT_COMMANDS);
-		
-		commandBufferReset();
-		return 0;
-	}
-	
-	commandCounter++;
-
 	//pop off the DTX
 	commandBufferPop();
+	
+	
+//	if ((commandCounter == 20) && !lastLot) {
+//		//stop all motor action
+//		doCommands = 0;
+//		
+//		//reset counter
+//		commandCounter = 0;
+//		
+//		//send for next lot
+//		sendUSART(SEND_FOR_NEXT_COMMANDS);
+//		
+//		commandBufferReset();
+//		return 0;
+//	}
+//	
+//	commandCounter++;
+
+	
 	
 	
 //	//rxBufferDiscard(messageLength);
@@ -188,6 +201,21 @@ uint8_t executeDelayedBuffer(void) {
 //	}
 	return 1;
 	
+	
+}
+
+void housekeep(void) {
+
+	
+	sendUSART(SEND_FOR_NEXT_COMMANDS);
+	
+//	if (commandCounter >= numCommands) {
+//		doCommands = 0;
+//		sendUSART(SEND_FINISHED_DRAWING)
+//	}
+//	
+//	commandCounter++;
+
 	
 }
 

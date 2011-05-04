@@ -73,8 +73,10 @@ void movePenUp(void);
 void movePenDown(void);
 void changeStepDelay(uint8_t ms);
 
+void housekeep(void);
+
 uint8_t doCommands;
-uint8_t	commandCounter;
+uint16_t	commandCounter;
 uint8_t lastLot;
 uint16_t numCommands;
 

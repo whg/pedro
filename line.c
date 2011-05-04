@@ -8,11 +8,13 @@ void lineTo(uint16_t x, uint16_t y) {
 	pos.x = x;
 	pos.y = y;
 	
-	sendUSART(121);
-	sendUSART16(x);
-	sendUSART16(y);
-	sendUSART16(pos.x);
-	sendUSART16(pos.y);
+//	sendUSART(121);
+//	sendUSART16(x);
+//	sendUSART16(y);
+//	sendUSART16(pos.x);
+//	sendUSART16(pos.y);
+	
+	delay_ms(1);
 }
 
 void line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
